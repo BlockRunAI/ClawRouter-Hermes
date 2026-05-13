@@ -1,0 +1,91 @@
+"""ClawRouter model-provider plugin (materialized into ~/.hermes/plugins/model-providers/clawrouter/).
+
+Wires ClawRouter into Hermes' provider registry. The actual proxy URL and
+default model are read at import time from
+``~/.openclaw/hermes-plugin.json`` (written by the standalone plugin's
+supervisor when it negotiates a port). If that file is missing we fall
+back to the canonical defaults.
+
+This module is loaded by ``providers/__init__.py`` (Hermes' lazy
+discovery), not by the general PluginManager.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+from pathlib import Path
+from typing import Any
+
+from providers import register_provider
+from providers.base import ProviderProfile
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_BASE_URL = "http://127.0.0.1:8402/v1"
+_STATE_FILE = Path.home() / ".openclaw" / "hermes-plugin.json"
+
+
+def _read_base_url() -> str:
+    override = os.environ.get("CLAWROUTER_PROXY_URL")
+    if override:
+        return override.rstrip("/")
+    try:
+        if _STATE_FILE.is_file():
+            data = json.loads(_STATE_FILE.read_text())
+            port = int(data.get("port") or 8402)
+            return f"http://127.0.0.1:{port}/v1"
+    except Exception as exc:
+        logger.debug("clawrouter provider: failed reading state file: %s", exc)
+    return _DEFAULT_BASE_URL
+
+
+_STATIC_FALLBACKS = (
+    "blockrun/auto",
+    "gpt-4o-mini",
+    "claude-3-5-haiku-latest",
+    "grok-2-mini",
+    "deepseek-chat",
+)
+
+
+class ClawRouterProfile(ProviderProfile):
+    """ClawRouter — OpenAI-compatible gateway with x402 micropayments.
+
+    The local proxy handles wallet signing and routing; this profile is a
+    thin pointer at http://127.0.0.1:<port>/v1 plus a sensible default
+    auxiliary model.
+    """
+
+    def build_api_kwargs_extras(
+        self,
+        *,
+        reasoning_config: dict | None = None,
+        supports_reasoning: bool = False,
+        **ctx: Any,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        extra_body: dict[str, Any] = {}
+        if supports_reasoning and reasoning_config is not None:
+            extra_body["reasoning"] = dict(reasoning_config)
+        return extra_body, {}
+
+
+clawrouter = ClawRouterProfile(
+    name="clawrouter",
+    aliases=("blockrun", "claw"),
+    display_name="ClawRouter",
+    description="ClawRouter — 55+ models, x402 USDC micropayments (Base + Solana), smart routing",
+    signup_url="https://blockrun.ai",
+    env_vars=(),
+    base_url=_read_base_url(),
+    models_url=f"{_read_base_url()}/models",
+    auth_type="api_key",
+    fallback_models=_STATIC_FALLBACKS,
+    default_aux_model="blockrun/auto",
+    default_headers={
+        "X-Hermes-Plugin": "clawrouter",
+    },
+)
+
+register_provider(clawrouter)

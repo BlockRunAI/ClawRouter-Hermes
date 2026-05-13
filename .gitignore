@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.eggs/
+
+# Build / dist
+build/
+dist/
+wheels/
+*.whl
+*.tar.gz
+
+# Test caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local Hermes state — never commit user wallets or proxy state
+.openclaw/
+.hermes/
+
+# Local override files
+.env
+.env.local

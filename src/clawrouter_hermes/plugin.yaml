@@ -1,0 +1,10 @@
+name: clawrouter
+version: 0.1.0
+description: "ClawRouter for Hermes — 55+ models, x402 USDC micropayments, smart routing. Wraps the local ClawRouter proxy on http://127.0.0.1:8402."
+author: BlockRun
+kind: standalone
+provides_tools:
+  - clawrouter_image_generate
+  - clawrouter_video_generate
+  - clawrouter_web_search
+provides_hooks: []

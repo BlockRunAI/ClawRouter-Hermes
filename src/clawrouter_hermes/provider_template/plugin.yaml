@@ -1,0 +1,5 @@
+name: clawrouter-provider
+kind: model-provider
+version: 0.1.0
+description: "ClawRouter — smart LLM router with x402 USDC micropayments. Routes through the local proxy on http://127.0.0.1:8402."
+author: BlockRun
