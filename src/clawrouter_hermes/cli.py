@@ -349,6 +349,61 @@ def _wallet(args: argparse.Namespace) -> None:
     print(wallet.format_summary(summary))
 
 
+def _check_provider_config() -> Tuple[bool, str]:
+    """Doctor probe: is ``providers.clawrouter`` in ``~/.hermes/config.yaml``
+    and does its URL match the proxy this process would use?
+
+    Hermes' ``resolve_user_provider`` accepts ``api``, ``url``, or ``base_url``
+    as the URL key (in that precedence order); we accept any of them so a
+    hand-edited entry is still considered healthy.
+    """
+    path = _config_file()
+    if not path.is_file():
+        return False, f"{path} missing"
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return False, "PyYAML not importable"
+    try:
+        raw = path.read_text(encoding="utf-8")
+        cfg = yaml.safe_load(raw) if raw.strip() else {}
+    except Exception as exc:
+        return False, f"{path}: {exc}"
+    if not isinstance(cfg, dict):
+        return False, f"{path}: top-level is not a mapping"
+    entry = (cfg.get("providers") or {}).get("clawrouter")
+    if not isinstance(entry, dict):
+        return False, f"{path}: providers.clawrouter missing"
+    url = entry.get("api") or entry.get("url") or entry.get("base_url") or ""
+    if url.rstrip("/") != _base_url():
+        return False, f"URL mismatch: config={url!r} expected={_base_url()!r}"
+    return True, str(path)
+
+
+def _check_api_key_present() -> Tuple[bool, str]:
+    """Doctor probe: is ``CLAWROUTER_API_KEY`` resolvable by Hermes?
+
+    Hermes' provider-detection requires the env var to exist before it
+    will surface the provider. Either the live process env or the line
+    in ``~/.hermes/.env`` is enough — Hermes loads both.
+    """
+    if os.environ.get("CLAWROUTER_API_KEY"):
+        return True, "env"
+    env_path = _env_file()
+    if env_path.is_file():
+        try:
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if stripped.startswith("#") or "=" not in stripped:
+                    continue
+                key, _, _ = stripped.partition("=")
+                if key.strip() == "CLAWROUTER_API_KEY":
+                    return True, str(env_path)
+        except OSError:
+            pass
+    return False, f"not set; expected in env or {env_path}"
+
+
 def _doctor(_: argparse.Namespace) -> None:
     rows: List[Tuple[str, bool, str]] = []
 
@@ -382,6 +437,12 @@ def _doctor(_: argparse.Namespace) -> None:
          _provider_plugin_dir().is_dir(),
          str(_provider_plugin_dir())),
     )
+
+    cfg_ok, cfg_detail = _check_provider_config()
+    rows.append(("providers.clawrouter in config.yaml", cfg_ok, cfg_detail))
+
+    key_ok, key_detail = _check_api_key_present()
+    rows.append(("CLAWROUTER_API_KEY available", key_ok, key_detail))
 
     proxy_status = proxy_supervisor.status()
     rows.append(
