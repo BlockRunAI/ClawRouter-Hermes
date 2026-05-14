@@ -21,6 +21,13 @@ from typing import Iterable, List, Tuple
 
 from . import proxy_supervisor, state, tools, wallet
 
+_PROXY_BASE_URL = "http://127.0.0.1:8402/v1"
+_PROVIDER_ENTRY = {
+    "name": "ClawRouter",
+    "api": _PROXY_BASE_URL,
+    "transport": "openai_chat",
+}
+
 
 def _hermes_home() -> Path:
     """Mirror ``hermes_constants.get_hermes_home`` — honor ``HERMES_HOME``.
@@ -36,6 +43,51 @@ def _hermes_home() -> Path:
 
 def _provider_plugin_dir() -> Path:
     return _hermes_home() / "plugins" / "model-providers" / "clawrouter"
+
+
+def _hermes_config_path() -> Path:
+    return _hermes_home() / "config.yaml"
+
+
+def _ensure_provider_config() -> bool:
+    """Write providers.clawrouter into ~/.hermes/config.yaml if absent or stale.
+
+    Hermes has two separate provider systems: ProviderProfile (used by
+    providers/__init__.py for building OpenAI clients) and ProviderDef (used
+    by hermes_cli/providers.py resolve_provider_full for model selection and
+    the --provider flag). The model-provider plugin materialized by setup only
+    populates the first system. Without this entry in config.yaml the second
+    system raises "Unknown provider 'clawrouter'" and falls back to auto.
+
+    Returns True if the entry was written/updated, False if already present.
+    """
+    try:
+        import yaml
+    except ImportError:
+        return False
+
+    config_path = _hermes_config_path()
+    config: dict = {}
+    if config_path.is_file():
+        try:
+            config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        except Exception:
+            config = {}
+
+    providers = config.setdefault("providers", {})
+    existing = providers.get("clawrouter") or {}
+    if isinstance(existing, dict) and all(
+        existing.get(k) == v for k, v in _PROVIDER_ENTRY.items()
+    ):
+        return False
+
+    providers["clawrouter"] = dict(_PROVIDER_ENTRY)
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        yaml.dump(config, default_flow_style=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    return True
 
 
 def __getattr__(name: str):
@@ -134,6 +186,11 @@ def _setup(args: argparse.Namespace) -> None:
         print(f"  Expected: {wallet.MNEMONIC_FILE}")
         print("  Run: npx @blockrun/clawrouter setup")
 
+    if _ensure_provider_config():
+        print(f"✓ Registered providers.clawrouter in {_hermes_config_path()}")
+    else:
+        print(f"✓ providers.clawrouter already in {_hermes_config_path()}")
+
     print()
     print("Next: open a Hermes chat with model `blockrun/auto` and ask anything.")
 
@@ -202,6 +259,20 @@ def _doctor(_: argparse.Namespace) -> None:
         ("Model-provider plugin installed",
          _provider_plugin_dir().is_dir(),
          str(_provider_plugin_dir())),
+    )
+
+    try:
+        import yaml
+        config_path = _hermes_config_path()
+        cfg = yaml.safe_load(config_path.read_text(encoding="utf-8")) if config_path.is_file() else {}
+        existing = (cfg or {}).get("providers", {}).get("clawrouter") or {}
+        cfg_ok = isinstance(existing, dict) and all(
+            existing.get(k) == v for k, v in _PROVIDER_ENTRY.items()
+        )
+    except Exception:
+        cfg_ok = False
+    rows.append(
+        ("providers.clawrouter in config.yaml", cfg_ok, str(_hermes_config_path())),
     )
 
     proxy_status = proxy_supervisor.status()
