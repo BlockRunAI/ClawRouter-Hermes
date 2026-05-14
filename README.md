@@ -80,6 +80,13 @@ pip install -e ".[dev]"
 pytest
 ```
 
+## Credits
+
+Thanks to the contributors who helped shape this plugin:
+
+- [@0xCheetah1](https://github.com/0xCheetah1) — one-shot `setup` integration: `.env` API-key seeding, `providers.clawrouter` registration in `~/.hermes/config.yaml`, `--set-default` opt-in, and the `models:` whitelist that lets Hermes' `/model` picker accept BlockRun catalog entries when the upstream `/v1/models` endpoint doesn't list them.
+- [@redbotster](https://github.com/redbotster) — diagnosed the two-provider-system gap (`ProviderProfile` vs `ProviderDef`) and proposed the `doctor` probe for the `config.yaml` provider block. The probe (with URL-key flexibility matching `hermes_cli/providers.py:resolve_user_provider`) is now part of `hermes-clawrouter doctor`.
+
 ## License
 
 MIT. © BlockRun.
