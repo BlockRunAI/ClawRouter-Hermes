@@ -17,7 +17,8 @@ CHAT_MODELS = (
     "anthropic/claude-opus-4.7",
     "google/gemini-2.5-pro",
     "moonshot/kimi-k2.6",
-    "deepseek/deepseek-v4-flash",
+    "nvidia/deepseek-v4-flash",
+    "deepseek/deepseek-chat",
     "minimax/minimax-m2.7",
 )
 

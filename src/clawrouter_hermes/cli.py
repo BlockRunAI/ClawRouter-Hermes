@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -20,6 +21,8 @@ from pathlib import Path
 from typing import Iterable, List, Tuple
 
 from . import models, proxy_supervisor, state, tools, wallet
+
+logger = logging.getLogger(__name__)
 
 
 def _hermes_home() -> Path:
@@ -69,6 +72,14 @@ def register_cli(subparser: argparse.ArgumentParser) -> None:
     setup_p.add_argument(
         "--force", action="store_true",
         help="Overwrite an existing ~/.hermes/plugins/model-providers/clawrouter/",
+    )
+    setup_p.add_argument(
+        "--set-default", action="store_true",
+        help=(
+            "Force ClawRouter to be the default provider/model in "
+            "~/.hermes/config.yaml, overwriting any existing setting. "
+            "By default setup leaves an existing default model alone."
+        ),
     )
     setup_p.set_defaults(func=_setup)
 
@@ -126,7 +137,9 @@ def _setup(args: argparse.Namespace) -> None:
     _ensure_local_api_key()
     print(f"✓ Ensured CLAWROUTER_API_KEY in {_env_file()}")
 
-    config_changed = _configure_hermes_provider(set_default=True)
+    config_changed = _configure_hermes_provider(
+        set_default_force=bool(getattr(args, "set_default", False)),
+    )
     if config_changed:
         print(f"✓ Registered ClawRouter in {_config_file()} for /model picker support")
     else:
@@ -181,7 +194,13 @@ def _materialize_provider_plugin(*, force: bool) -> None:
 
 
 def _ensure_local_api_key() -> None:
-    """Seed a harmless local bearer so Hermes treats ClawRouter as configured."""
+    """Seed a harmless local bearer so Hermes treats ClawRouter as configured.
+
+    Hermes' provider-detection requires an env var to exist before it will
+    surface the provider in pickers. The local ClawRouter proxy doesn't
+    actually authenticate against this string — wallet signing happens at
+    the proxy boundary. We write a placeholder so the gate passes.
+    """
     os.environ.setdefault("CLAWROUTER_API_KEY", "clawrouter-local")
     path = _env_file()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,14 +209,31 @@ def _ensure_local_api_key() -> None:
         return
     prefix = existing.rstrip()
     suffix = "\n" if prefix else ""
-    path.write_text(f"{prefix}{suffix}CLAWROUTER_API_KEY=clawrouter-local\n", encoding="utf-8")
+    placeholder = (
+        "# Placeholder — ClawRouter authenticates via the local wallet at the\n"
+        "# proxy boundary. Hermes only checks that this variable is set.\n"
+        "CLAWROUTER_API_KEY=clawrouter-local\n"
+    )
+    path.write_text(f"{prefix}{suffix}{placeholder}", encoding="utf-8")
 
 
-def _configure_hermes_provider(*, set_default: bool = False) -> bool:
-    """Add ClawRouter to Hermes config so gateway /model can list it."""
+def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
+    """Add ClawRouter to Hermes config so the gateway /model picker can list it.
+
+    The ``providers.clawrouter`` block is always upserted to match our
+    desired definition. The top-level ``model.{default,provider,base_url}``
+    keys are touched conservatively: we only seed them when they're absent.
+    Pass ``set_default_force=True`` (wired to the ``--set-default`` CLI flag)
+    to overwrite an existing default — opting in to making ClawRouter the
+    user's default provider.
+    """
     try:
         import yaml  # type: ignore
     except Exception:
+        logger.warning(
+            "clawrouter: PyYAML not importable; skipping ~/.hermes/config.yaml update. "
+            "Install it to enable /model picker integration."
+        )
         return False
 
     path = _config_file()
@@ -208,14 +244,20 @@ def _configure_hermes_provider(*, set_default: bool = False) -> bool:
         config = {}
 
     changed = False
+    desired_model_defaults = {
+        "default": "blockrun/auto",
+        "provider": "clawrouter",
+        "base_url": _base_url(),
+    }
     model_cfg = config.setdefault("model", {})
-    if set_default and isinstance(model_cfg, dict):
-        for key, value in {
-            "default": "blockrun/auto",
-            "provider": "clawrouter",
-            "base_url": _base_url(),
-        }.items():
-            if model_cfg.get(key) != value:
+    if isinstance(model_cfg, dict):
+        for key, value in desired_model_defaults.items():
+            current = model_cfg.get(key)
+            if set_default_force:
+                if current != value:
+                    model_cfg[key] = value
+                    changed = True
+            elif current is None:
                 model_cfg[key] = value
                 changed = True
 
@@ -253,23 +295,41 @@ def _base_url() -> str:
     return os.environ.get("CLAWROUTER_PROXY_URL", "http://127.0.0.1:8402/v1").rstrip("/")
 
 
-def install_hermes_compat(*, force_provider: bool = False, set_default: bool = False) -> None:
-    """Best-effort one-shot install for Hermes plugin/provider integration."""
+def install_hermes_compat(
+    *, force_provider: bool = False, set_default: bool = False
+) -> None:
+    """One-shot install for Hermes plugin/provider integration.
+
+    Called from the ``setup`` subcommand (and tests). NOT called from plugin
+    ``register()`` — plugin load must be inert and never touch the user's
+    ``~/.hermes`` files.
+    """
     if force_provider or not _provider_plugin_dir().exists():
         _materialize_provider_plugin(force=force_provider)
     _ensure_local_api_key()
-    _configure_hermes_provider(set_default=set_default)
+    _configure_hermes_provider(set_default_force=set_default)
 
 
 def patch_hermes_model_catalog() -> None:
-    """Expose ClawRouter models to Hermes' in-process /model picker."""
+    """Expose ClawRouter models to Hermes' in-process /model picker.
+
+    Reaches into ``hermes_cli.models._PROVIDER_MODELS`` (private attribute).
+    Silently no-ops on Hermes versions that don't expose it; debug-logged
+    so the breakage is discoverable when triaging picker issues.
+    """
     try:
         from hermes_cli import models as hermes_models  # type: ignore
-    except Exception:
+    except Exception as exc:
+        logger.debug("clawrouter: hermes_cli.models unavailable (%s)", exc)
         return
     provider_models = getattr(hermes_models, "_PROVIDER_MODELS", None)
     if isinstance(provider_models, dict):
         provider_models["clawrouter"] = models.chat_models()
+    else:
+        logger.debug(
+            "clawrouter: hermes_cli.models._PROVIDER_MODELS missing — "
+            "Hermes layout changed; /model picker will fall back to discovery."
+        )
 
 
 def _wallet(args: argparse.Namespace) -> None:

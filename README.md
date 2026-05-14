@@ -13,7 +13,7 @@ hermes-clawrouter setup
 hermes-clawrouter doctor
 ```
 
-`setup` writes the model-provider plugin to `~/.hermes/plugins/model-providers/clawrouter/`, seeds `CLAWROUTER_API_KEY=clawrouter-local` in `~/.hermes/.env`, and registers ClawRouter in `~/.hermes/config.yaml` so Hermes' `/model` picker can show the provider and curated BlockRun chat models.
+`setup` writes the model-provider plugin to `~/.hermes/plugins/model-providers/clawrouter/`, seeds `CLAWROUTER_API_KEY=clawrouter-local` in `~/.hermes/.env`, and registers ClawRouter under `providers.clawrouter` in `~/.hermes/config.yaml` so Hermes' `/model` picker can show the provider and curated BlockRun chat models. It does **not** change your default model unless you pass `--set-default`, which makes `blockrun/auto` the default and switches `model.provider` to `clawrouter`.
 
 `hermes-clawrouter` is provided because some Hermes releases do not add plugin-defined top-level CLI commands before the plugin is enabled. Once the plugin is loaded, `hermes clawrouter <setup|wallet|doctor|route|stats>` may also be available.
 

@@ -67,6 +67,61 @@ def test_install_hermes_compat_writes_provider_env_and_config(tmp_path, monkeypa
     assert "blockrun/auto" in config["providers"]["clawrouter"]["models"]
 
 
+def test_setup_preserves_existing_default_model_without_force(tmp_path, monkeypatch):
+    """Without set_default=True, an existing model.default must not be clobbered."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    import importlib
+    import yaml
+    import clawrouter_hermes.cli as cli_module
+    importlib.reload(cli_module)
+
+    hermes_home = tmp_path / ".hermes"
+    hermes_home.mkdir(parents=True, exist_ok=True)
+    (hermes_home / "config.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "model": {"default": "anthropic/claude-opus-4.7", "provider": "anthropic"},
+                "unrelated": {"key": "value"},
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    cli_module.install_hermes_compat(force_provider=True, set_default=False)
+
+    config = yaml.safe_load((hermes_home / "config.yaml").read_text())
+    # User's chosen default is preserved.
+    assert config["model"]["default"] == "anthropic/claude-opus-4.7"
+    assert config["model"]["provider"] == "anthropic"
+    # Unrelated keys preserved.
+    assert config["unrelated"] == {"key": "value"}
+    # ClawRouter provider entry still registered for the picker.
+    assert config["providers"]["clawrouter"]["key_env"] == "CLAWROUTER_API_KEY"
+
+
+def test_install_hermes_compat_is_idempotent(tmp_path, monkeypatch):
+    """Running setup twice produces no diff on the second run."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    import importlib
+    import clawrouter_hermes.cli as cli_module
+    importlib.reload(cli_module)
+
+    cli_module.install_hermes_compat(force_provider=True, set_default=True)
+    hermes_home = tmp_path / ".hermes"
+    first_config = (hermes_home / "config.yaml").read_text()
+    first_env = (hermes_home / ".env").read_text()
+
+    cli_module.install_hermes_compat(force_provider=False, set_default=True)
+    second_config = (hermes_home / "config.yaml").read_text()
+    second_env = (hermes_home / ".env").read_text()
+
+    assert first_config == second_config
+    assert first_env == second_env
+
+
 def test_hermes_home_env_var_respected(tmp_path, monkeypatch):
     """When HERMES_HOME is set, materializer writes there (not ~/.hermes)."""
     custom = tmp_path / "custom_hermes_root"

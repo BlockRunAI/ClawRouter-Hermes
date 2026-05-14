@@ -37,7 +37,7 @@ dev = [
 ]
 
 [project.entry-points."hermes_agent.plugins"]
-clawrouter = "clawrouter_hermes"
+clawrouter = "clawrouter_hermes:register"
 
 [project.scripts]
 hermes-clawrouter = "clawrouter_hermes.cli:main"
