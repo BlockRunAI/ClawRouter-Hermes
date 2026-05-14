@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "httpx>=0.27",
     "bip_utils>=2.9",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +37,10 @@ dev = [
 ]
 
 [project.entry-points."hermes_agent.plugins"]
-clawrouter = "clawrouter_hermes:register"
+clawrouter = "clawrouter_hermes"
+
+[project.scripts]
+hermes-clawrouter = "clawrouter_hermes.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/BlockRunAI/ClawRouter"

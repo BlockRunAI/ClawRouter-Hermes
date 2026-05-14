@@ -32,6 +32,7 @@ _VERSION = "0.1.0"
 
 def register(ctx) -> None:
     """Wire all surfaces into the Hermes plugin context."""
+    _install_compat()
     _register_tools(ctx)
     _register_slash_command(ctx)
     _register_cli(ctx)
@@ -46,6 +47,15 @@ def register(ctx) -> None:
             logger.debug("clawrouter: proxy not yet running (will spawn on first use)")
     except Exception as exc:
         logger.debug("clawrouter: startup probe failed: %s", exc)
+
+
+def _install_compat() -> None:
+    """Best-effort setup for Hermes versions that need provider/config hints."""
+    try:
+        _cli.install_hermes_compat()
+        _cli.patch_hermes_model_catalog()
+    except Exception as exc:
+        logger.debug("clawrouter: compatibility setup skipped: %s", exc)
 
 
 def _register_tools(ctx) -> None:

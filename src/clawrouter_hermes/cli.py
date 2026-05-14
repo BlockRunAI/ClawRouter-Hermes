@@ -19,7 +19,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
-from . import proxy_supervisor, state, tools, wallet
+from . import models, proxy_supervisor, state, tools, wallet
 
 
 def _hermes_home() -> Path:
@@ -36,6 +36,14 @@ def _hermes_home() -> Path:
 
 def _provider_plugin_dir() -> Path:
     return _hermes_home() / "plugins" / "model-providers" / "clawrouter"
+
+
+def _env_file() -> Path:
+    return _hermes_home() / ".env"
+
+
+def _config_file() -> Path:
+    return _hermes_home() / "config.yaml"
 
 
 def __getattr__(name: str):
@@ -115,6 +123,15 @@ def _setup(args: argparse.Namespace) -> None:
         _materialize_provider_plugin(force=args.force)
         print(f"✓ Wrote model-provider plugin to {_provider_plugin_dir()}")
 
+    _ensure_local_api_key()
+    print(f"✓ Ensured CLAWROUTER_API_KEY in {_env_file()}")
+
+    config_changed = _configure_hermes_provider(set_default=True)
+    if config_changed:
+        print(f"✓ Registered ClawRouter in {_config_file()} for /model picker support")
+    else:
+        print(f"✓ ClawRouter already registered in {_config_file()}")
+
     if shutil.which("npx") is None:
         print("✗ `npx` not found on PATH.")
         print("  Install Node.js 18+ from https://nodejs.org and re-run setup.")
@@ -135,7 +152,8 @@ def _setup(args: argparse.Namespace) -> None:
         print("  Run: npx @blockrun/clawrouter setup")
 
     print()
-    print("Next: open a Hermes chat with model `blockrun/auto` and ask anything.")
+    print("Next: restart any running Hermes gateway, then choose ClawRouter in /model or run:")
+    print("  hermes --provider clawrouter -m blockrun/auto")
 
 
 def _materialize_provider_plugin(*, force: bool) -> None:
@@ -160,6 +178,98 @@ def _materialize_provider_plugin(*, force: bool) -> None:
                 "This indicates a broken package install."
             ) from exc
         (_provider_plugin_dir() / dst_name).write_text(data, encoding="utf-8")
+
+
+def _ensure_local_api_key() -> None:
+    """Seed a harmless local bearer so Hermes treats ClawRouter as configured."""
+    os.environ.setdefault("CLAWROUTER_API_KEY", "clawrouter-local")
+    path = _env_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = path.read_text(encoding="utf-8") if path.exists() else ""
+    if "CLAWROUTER_API_KEY=" in existing:
+        return
+    prefix = existing.rstrip()
+    suffix = "\n" if prefix else ""
+    path.write_text(f"{prefix}{suffix}CLAWROUTER_API_KEY=clawrouter-local\n", encoding="utf-8")
+
+
+def _configure_hermes_provider(*, set_default: bool = False) -> bool:
+    """Add ClawRouter to Hermes config so gateway /model can list it."""
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return False
+
+    path = _config_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = path.read_text(encoding="utf-8") if path.exists() else ""
+    config = yaml.safe_load(raw) if raw.strip() else {}
+    if not isinstance(config, dict):
+        config = {}
+
+    changed = False
+    model_cfg = config.setdefault("model", {})
+    if set_default and isinstance(model_cfg, dict):
+        for key, value in {
+            "default": "blockrun/auto",
+            "provider": "clawrouter",
+            "base_url": _base_url(),
+        }.items():
+            if model_cfg.get(key) != value:
+                model_cfg[key] = value
+                changed = True
+
+    providers = config.setdefault("providers", {})
+    if not isinstance(providers, dict):
+        providers = {}
+        config["providers"] = providers
+        changed = True
+
+    desired = {
+        "name": "ClawRouter",
+        "base_url": _base_url(),
+        "key_env": "CLAWROUTER_API_KEY",
+        "transport": "openai_chat",
+        "default_model": "blockrun/auto",
+        "discover_models": False,
+        "models": models.chat_models(),
+    }
+    current = providers.get("clawrouter")
+    if not isinstance(current, dict):
+        providers["clawrouter"] = desired
+        changed = True
+    else:
+        for key, value in desired.items():
+            if current.get(key) != value:
+                current[key] = value
+                changed = True
+
+    if changed or not path.exists():
+        path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    return changed
+
+
+def _base_url() -> str:
+    return os.environ.get("CLAWROUTER_PROXY_URL", "http://127.0.0.1:8402/v1").rstrip("/")
+
+
+def install_hermes_compat(*, force_provider: bool = False, set_default: bool = False) -> None:
+    """Best-effort one-shot install for Hermes plugin/provider integration."""
+    if force_provider or not _provider_plugin_dir().exists():
+        _materialize_provider_plugin(force=force_provider)
+    _ensure_local_api_key()
+    _configure_hermes_provider(set_default=set_default)
+
+
+def patch_hermes_model_catalog() -> None:
+    """Expose ClawRouter models to Hermes' in-process /model picker."""
+    try:
+        from hermes_cli import models as hermes_models  # type: ignore
+    except Exception:
+        return
+    provider_models = getattr(hermes_models, "_PROVIDER_MODELS", None)
+    if isinstance(provider_models, dict):
+        provider_models["clawrouter"] = models.chat_models()
 
 
 def _wallet(args: argparse.Namespace) -> None:
@@ -252,3 +362,10 @@ def _route(args: argparse.Namespace) -> None:
 
 def _stats(_: argparse.Namespace) -> None:
     print(json.dumps(tools.proxy_stats(), indent=2))
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="hermes-clawrouter")
+    register_cli(parser)
+    args = parser.parse_args(argv)
+    clawrouter_command(args)

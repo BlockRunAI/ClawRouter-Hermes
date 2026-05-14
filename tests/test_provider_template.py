@@ -26,6 +26,7 @@ def test_provider_init_template_calls_register_provider():
     assert "register_provider" in text
     assert "ClawRouterProfile" in text
     assert "base_url" in text
+    assert "CLAWROUTER_API_KEY" in text
 
 
 def test_materialize_writes_correct_filenames(tmp_path, monkeypatch):
@@ -43,6 +44,27 @@ def test_materialize_writes_correct_filenames(tmp_path, monkeypatch):
     assert (target / "__init__.py").is_file()
     assert "register_provider" in (target / "__init__.py").read_text()
     assert "kind: model-provider" in (target / "plugin.yaml").read_text()
+
+
+def test_install_hermes_compat_writes_provider_env_and_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    import importlib
+    import yaml
+    import clawrouter_hermes.cli as cli_module
+    importlib.reload(cli_module)
+
+    cli_module.install_hermes_compat(force_provider=True, set_default=True)
+
+    hermes_home = tmp_path / ".hermes"
+    assert (hermes_home / "plugins" / "model-providers" / "clawrouter" / "__init__.py").is_file()
+    assert "CLAWROUTER_API_KEY=clawrouter-local" in (hermes_home / ".env").read_text()
+
+    config = yaml.safe_load((hermes_home / "config.yaml").read_text())
+    assert config["model"]["provider"] == "clawrouter"
+    assert config["model"]["default"] == "blockrun/auto"
+    assert config["providers"]["clawrouter"]["key_env"] == "CLAWROUTER_API_KEY"
+    assert "blockrun/auto" in config["providers"]["clawrouter"]["models"]
 
 
 def test_hermes_home_env_var_respected(tmp_path, monkeypatch):
