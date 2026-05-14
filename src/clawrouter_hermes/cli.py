@@ -70,6 +70,14 @@ def register_cli(subparser: argparse.ArgumentParser) -> None:
         "--force", action="store_true",
         help="Overwrite an existing ~/.hermes/plugins/model-providers/clawrouter/",
     )
+    setup_p.add_argument(
+        "--set-default", action="store_true",
+        help=(
+            "Force ClawRouter to be the default provider/model in "
+            "~/.hermes/config.yaml, overwriting any existing setting. "
+            "By default setup leaves an existing default model alone."
+        ),
+    )
     setup_p.set_defaults(func=_setup)
 
     wallet_p = subs.add_parser("wallet", help="Show wallet address + USDC balances")
@@ -126,7 +134,9 @@ def _setup(args: argparse.Namespace) -> None:
     _ensure_local_api_key()
     print(f"✓ Ensured CLAWROUTER_API_KEY in {_env_file()}")
 
-    config_changed = _configure_hermes_provider(set_default=True)
+    config_changed = _configure_hermes_provider(
+        set_default_force=bool(getattr(args, "set_default", False)),
+    )
     if config_changed:
         print(f"✓ Registered ClawRouter in {_config_file()} for /model picker support")
     else:
@@ -193,7 +203,7 @@ def _ensure_local_api_key() -> None:
     path.write_text(f"{prefix}{suffix}CLAWROUTER_API_KEY=clawrouter-local\n", encoding="utf-8")
 
 
-def _configure_hermes_provider(*, set_default: bool = False) -> bool:
+def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
     """Add ClawRouter to Hermes config so gateway /model can list it."""
     try:
         import yaml  # type: ignore
@@ -208,16 +218,31 @@ def _configure_hermes_provider(*, set_default: bool = False) -> bool:
         config = {}
 
     changed = False
+    desired_model_defaults = {
+        "default": "blockrun/auto",
+        "provider": "clawrouter",
+        "base_url": _base_url(),
+    }
     model_cfg = config.setdefault("model", {})
-    if set_default and isinstance(model_cfg, dict):
-        for key, value in {
-            "default": "blockrun/auto",
-            "provider": "clawrouter",
-            "base_url": _base_url(),
-        }.items():
-            if model_cfg.get(key) != value:
-                model_cfg[key] = value
-                changed = True
+    if isinstance(model_cfg, dict):
+        if set_default_force:
+            # Opt-in: overwrite all three keys.
+            for key, value in desired_model_defaults.items():
+                if model_cfg.get(key) != value:
+                    model_cfg[key] = value
+                    changed = True
+        else:
+            # Conservative: only seed when none of the three keys are set.
+            # If any of {default, provider, base_url} exists, the user has
+            # an existing config we mustn't half-overwrite (e.g. setting
+            # base_url while leaving provider=anthropic would break them).
+            already_has_any = any(
+                model_cfg.get(k) is not None for k in desired_model_defaults
+            )
+            if not already_has_any:
+                for key, value in desired_model_defaults.items():
+                    model_cfg[key] = value
+                    changed = True
 
     providers = config.setdefault("providers", {})
     if not isinstance(providers, dict):
@@ -258,7 +283,7 @@ def install_hermes_compat(*, force_provider: bool = False, set_default: bool = F
     if force_provider or not _provider_plugin_dir().exists():
         _materialize_provider_plugin(force=force_provider)
     _ensure_local_api_key()
-    _configure_hermes_provider(set_default=set_default)
+    _configure_hermes_provider(set_default_force=set_default)
 
 
 def patch_hermes_model_catalog() -> None:
