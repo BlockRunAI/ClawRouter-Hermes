@@ -95,6 +95,9 @@ def test_setup_preserves_existing_default_model_without_force(tmp_path, monkeypa
     # User's chosen default is preserved.
     assert config["model"]["default"] == "anthropic/claude-opus-4.7"
     assert config["model"]["provider"] == "anthropic"
+    # And the base_url is NOT injected (would otherwise point Anthropic
+    # calls at the local ClawRouter proxy).
+    assert "base_url" not in config["model"]
     # Unrelated keys preserved.
     assert config["unrelated"] == {"key": "value"}
     # ClawRouter provider entry still registered for the picker.

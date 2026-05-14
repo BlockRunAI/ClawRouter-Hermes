@@ -251,15 +251,24 @@ def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
     }
     model_cfg = config.setdefault("model", {})
     if isinstance(model_cfg, dict):
-        for key, value in desired_model_defaults.items():
-            current = model_cfg.get(key)
-            if set_default_force:
-                if current != value:
+        if set_default_force:
+            # Opt-in: overwrite all three keys.
+            for key, value in desired_model_defaults.items():
+                if model_cfg.get(key) != value:
                     model_cfg[key] = value
                     changed = True
-            elif current is None:
-                model_cfg[key] = value
-                changed = True
+        else:
+            # Conservative: only seed when none of the three keys are set.
+            # If any of {default, provider, base_url} exists, the user has
+            # an existing config we mustn't half-overwrite (e.g. setting
+            # base_url while leaving provider=anthropic would break them).
+            already_has_any = any(
+                model_cfg.get(k) is not None for k in desired_model_defaults
+            )
+            if not already_has_any:
+                for key, value in desired_model_defaults.items():
+                    model_cfg[key] = value
+                    changed = True
 
     providers = config.setdefault("providers", {})
     if not isinstance(providers, dict):
