@@ -119,8 +119,8 @@ def clawrouter_command(args: argparse.Namespace) -> None:
 
 def _default_help(_: argparse.Namespace) -> None:
     print(
-        "Usage: hermes clawrouter <setup|wallet|doctor|route|stats>\n\n"
-        "Run `hermes clawrouter <sub> --help` for details.",
+        "Usage: hermes-clawrouter <setup|wallet|doctor|route|stats>\n\n"
+        "Run `hermes-clawrouter <sub> --help` for details.",
     )
 
 
