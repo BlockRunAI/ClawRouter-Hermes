@@ -6,6 +6,8 @@ Wraps the existing [ClawRouter](https://github.com/BlockRunAI/ClawRouter) TypeSc
 
 ## Install
 
+Requires Python 3.10+.
+
 ```bash
 pip install hermes-plugin-clawrouter
 hermes plugins enable clawrouter
