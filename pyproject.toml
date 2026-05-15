@@ -11,7 +11,7 @@ license = { text = "MIT" }
 authors = [
     { name = "BlockRun" }
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 keywords = ["hermes", "hermes-agent", "clawrouter", "x402", "llm-router", "blockrun"]
 classifiers = [
     "Development Status :: 4 - Beta",
