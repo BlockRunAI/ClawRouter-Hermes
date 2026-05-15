@@ -9,11 +9,13 @@ Wraps the existing [ClawRouter](https://github.com/BlockRunAI/ClawRouter) TypeSc
 ```bash
 pip install hermes-plugin-clawrouter
 hermes plugins enable clawrouter
-hermes clawrouter setup
-hermes clawrouter doctor
+hermes-clawrouter setup
+hermes-clawrouter doctor
 ```
 
-`setup` writes the model-provider plugin to `~/.hermes/plugins/model-providers/clawrouter/` (Hermes only loads provider plugins from that directory; PyPI entry points can't ship them).
+`setup` writes the model-provider plugin to `~/.hermes/plugins/model-providers/clawrouter/`, seeds `CLAWROUTER_API_KEY=clawrouter-local` in `~/.hermes/.env`, and registers ClawRouter in `~/.hermes/config.yaml` so Hermes' `/model` picker can show the provider and curated BlockRun chat models.
+
+`hermes-clawrouter` is provided because some Hermes releases do not add plugin-defined top-level CLI commands before the plugin is enabled. Once the plugin is loaded, `hermes clawrouter <setup|wallet|doctor|route|stats>` may also be available.
 
 ## Usage
 
@@ -57,7 +59,7 @@ Set `BLOCKRUN_WALLET_KEY=<0x raw EVM hex>` to bypass the mnemonic file (EVM-only
 ## How it works
 
 1. `hermes` starts → the entry-point plugin is loaded → `register(ctx)` wires tools, slash commands, CLI, and the skill.
-2. `hermes clawrouter setup` materializes `~/.hermes/plugins/model-providers/clawrouter/{plugin.yaml,__init__.py}` from bundled package data.
+2. `hermes-clawrouter setup` materializes `~/.hermes/plugins/model-providers/clawrouter/{plugin.yaml,__init__.py}` from bundled package data and writes Hermes config/env hints needed by current Hermes provider and gateway model-picker paths.
 3. Hermes' `providers/__init__.py` discovers the materialized directory and registers the `ClawRouterProfile`, pointing `base_url` at `http://127.0.0.1:<port>/v1`.
 4. First tool call or chat turn → the supervisor probes `:8402`, spawns `npx -y @blockrun/clawrouter --port <port>` if needed, waits ≤30s for `/v1/models`, then forwards the request.
 5. A heartbeat thread restarts the subprocess on death (max 3 restarts/min).
