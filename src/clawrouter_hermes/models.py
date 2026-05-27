@@ -16,6 +16,7 @@ CHAT_MODELS = (
     "free",
     "eco",
     "premium",
+    "openai/gpt-5.5",
     "openai/gpt-5.4",
     "openai/gpt-5-mini",
     "anthropic/claude-opus-4.7",
