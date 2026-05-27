@@ -15,6 +15,8 @@ hermes-clawrouter doctor
 
 `setup` writes the model-provider plugin to `~/.hermes/plugins/model-providers/clawrouter/`, seeds `CLAWROUTER_API_KEY=clawrouter-local` in `~/.hermes/.env`, and registers ClawRouter in `~/.hermes/config.yaml` so Hermes' `/model` picker can show the provider and curated BlockRun chat models.
 
+`CLAWROUTER_API_KEY` is intentionally a non-secret placeholder. ClawRouter payments use the local wallet/proxy, but Hermes hides API-key-style providers from `/model` unless the configured key env var exists.
+
 `hermes-clawrouter` is provided because some Hermes releases do not add plugin-defined top-level CLI commands before the plugin is enabled. Once the plugin is loaded, `hermes clawrouter <setup|wallet|doctor|route|stats>` may also be available.
 
 ## Usage

@@ -34,6 +34,7 @@ def register(ctx) -> None:
     """Wire all surfaces into the Hermes plugin context."""
     _install_compat()
     _register_tools(ctx)
+    _register_hooks(ctx)
     _register_slash_command(ctx)
     _register_cli(ctx)
     _register_skill(ctx)
@@ -83,6 +84,33 @@ def _register_tools(ctx) -> None:
         description="Web search via ClawRouter Exa (x402-billed)",
         emoji="🔎",
     )
+
+
+def _register_hooks(ctx) -> None:
+    ctx.register_hook("pre_llm_call", _ensure_proxy_for_chat)
+
+
+def _ensure_proxy_for_chat(**kwargs) -> None:
+    """Start the local proxy before Hermes calls the ClawRouter provider."""
+    provider = str(
+        kwargs.get("provider")
+        or kwargs.get("provider_id")
+        or kwargs.get("runtime_provider")
+        or ""
+    ).lower()
+    base_url = str(kwargs.get("base_url") or kwargs.get("api_base") or "").lower()
+    model = str(kwargs.get("model") or "").lower()
+
+    if not (
+        provider in {"clawrouter", "blockrun", "claw"}
+        or "127.0.0.1:8402" in base_url
+        or model.startswith("blockrun/")
+    ):
+        return
+
+    status = proxy_supervisor.ensure_running()
+    if not status.reachable:
+        logger.warning("clawrouter: proxy unavailable before LLM call: %s", status.error)
 
 
 def _register_slash_command(ctx) -> None:
