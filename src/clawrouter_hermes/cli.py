@@ -191,7 +191,12 @@ def _materialize_provider_plugin(*, force: bool) -> None:
 
 
 def _ensure_local_api_key() -> None:
-    """Seed a harmless local bearer so Hermes treats ClawRouter as configured."""
+    """Seed a harmless local bearer so Hermes lists ClawRouter in /model.
+
+    ClawRouter itself does not use this for payment or wallet auth. Hermes hides
+    API-key-style providers from its model picker unless their key env var is
+    present, so this non-secret placeholder is only a discovery shim.
+    """
     os.environ.setdefault("CLAWROUTER_API_KEY", "clawrouter-local")
     path = _env_file()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -256,7 +261,6 @@ def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
         "key_env": "CLAWROUTER_API_KEY",
         "transport": "openai_chat",
         "default_model": "blockrun/auto",
-        "discover_models": False,
         "models": models.chat_models(),
     }
     current = providers.get("clawrouter")
@@ -264,6 +268,9 @@ def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
         providers["clawrouter"] = desired
         changed = True
     else:
+        if "discover_models" in current:
+            current.pop("discover_models", None)
+            changed = True
         for key, value in desired.items():
             if current.get(key) != value:
                 current[key] = value

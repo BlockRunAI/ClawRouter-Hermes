@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.resources as resources
 
 
 def _template_dir():
     return resources.files("clawrouter_hermes").joinpath("provider_template")
+
+
+def _template_static_fallbacks() -> tuple[str, ...]:
+    """Extract the _STATIC_FALLBACKS tuple from the (un-importable) template."""
+    source = _template_dir().joinpath("init.py.tmpl").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "_STATIC_FALLBACKS"
+            for t in node.targets
+        ):
+            return tuple(ast.literal_eval(node.value))
+    raise AssertionError("_STATIC_FALLBACKS not found in init.py.tmpl")
 
 
 def test_template_files_present():
@@ -27,6 +41,16 @@ def test_provider_init_template_calls_register_provider():
     assert "ClawRouterProfile" in text
     assert "base_url" in text
     assert "CLAWROUTER_API_KEY" in text
+
+
+def test_template_fallbacks_match_chat_models():
+    """The materialized provider's fallback_models must stay in sync with the
+    curated picker catalog in models.py. The template is copied verbatim (no
+    substitution), so the two lists are hand-maintained duplicates and drift
+    silently if only one is edited."""
+    from clawrouter_hermes import models
+
+    assert _template_static_fallbacks() == tuple(models.chat_models())
 
 
 def test_materialize_writes_correct_filenames(tmp_path, monkeypatch):
