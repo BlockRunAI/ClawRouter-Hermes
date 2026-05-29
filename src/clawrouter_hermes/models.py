@@ -33,7 +33,6 @@ CHAT_MODELS = (
 
 FREE_MODELS = frozenset({
     "blockrun/free",
-    "free",
     "nvidia/gpt-oss-120b",
     "free/glm-4.7",
     "free/qwen3-coder-480b",

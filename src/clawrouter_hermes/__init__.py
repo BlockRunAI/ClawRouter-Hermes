@@ -62,7 +62,16 @@ def _install_compat() -> None:
 
 
 def _patch_telegram_model_labels() -> None:
-    """Mark free ClawRouter models in Telegram picker labels only."""
+    """Mark free ClawRouter models in Telegram picker labels only.
+
+    We *wrap* the adapter's existing ``_build_model_keyboard`` rather than
+    reimplementing it: the original owns pagination, layout, nav buttons, and
+    the callback-data scheme, and we only relabel the model-selection buttons.
+    This keeps the patch resilient if the adapter's keyboard internals change —
+    if the method (or its ``mm:`` callback convention) ever goes away, the
+    wrapper degrades to a transparent pass-through instead of breaking the
+    picker.
+    """
     try:
         from gateway.platforms import telegram
     except Exception:
@@ -72,44 +81,36 @@ def _patch_telegram_model_labels() -> None:
     if adapter is None or getattr(adapter, "_clawrouter_labels_patched", False):
         return
 
+    original = getattr(adapter, "_build_model_keyboard", None)
     inline_button = getattr(telegram, "InlineKeyboardButton", None)
     inline_markup = getattr(telegram, "InlineKeyboardMarkup", None)
-    if inline_button is None or inline_markup is None:
+    if original is None or inline_button is None or inline_markup is None:
         return
 
-    def _build_model_keyboard(self, model_list: list, page: int) -> tuple:
-        page_size = self._MODEL_PAGE_SIZE
-        total = len(model_list)
-        total_pages = max(1, (total + page_size - 1) // page_size)
-        page = max(0, min(page, total_pages - 1))
+    def _build_model_keyboard(self, model_list: list, page: int):
+        markup, page_info = original(self, model_list, page)
 
-        start = page * page_size
-        end = min(start + page_size, total)
-        page_models = model_list[start:end]
-
-        buttons = []
-        for i, model_id in enumerate(page_models):
-            abs_idx = start + i
-            buttons.append(
-                inline_button(_models.picker_label(str(model_id)), callback_data=f"mm:{abs_idx}")
-            )
-
-        rows = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
-        if total_pages > 1:
-            nav = []
-            if page > 0:
-                nav.append(inline_button("◀ Prev", callback_data=f"mg:{page - 1}"))
-            nav.append(inline_button(f"{page + 1}/{total_pages}", callback_data="mx:noop"))
-            if page < total_pages - 1:
-                nav.append(inline_button("Next ▶", callback_data=f"mg:{page + 1}"))
-            rows.append(nav)
-
-        rows.append([
-            inline_button("◀ Back", callback_data="mb"),
-            inline_button("✗ Cancel", callback_data="mx"),
-        ])
-        page_info = f" ({start + 1}–{end} of {total})" if total_pages > 1 else ""
-        return inline_markup(rows), page_info
+        # Model-selection buttons carry ``mm:<abs_idx>`` callback data, where
+        # abs_idx indexes into model_list. Rebuild only those buttons with a
+        # free-aware label; pass every other button (nav/back/cancel) through
+        # untouched. We rebuild instead of mutating .text because telegram
+        # button objects may be frozen.
+        new_rows = []
+        for row in getattr(markup, "inline_keyboard", []) or []:
+            new_row = []
+            for btn in row:
+                cd = getattr(btn, "callback_data", "") or ""
+                if cd.startswith("mm:"):
+                    try:
+                        abs_idx = int(cd.split(":", 1)[1])
+                        label = _models.picker_label(str(model_list[abs_idx]))
+                        new_row.append(inline_button(label, callback_data=cd))
+                        continue
+                    except (ValueError, IndexError):
+                        pass
+                new_row.append(btn)
+            new_rows.append(new_row)
+        return inline_markup(new_rows), page_info
 
     adapter._build_model_keyboard = _build_model_keyboard
     adapter._clawrouter_labels_patched = True
