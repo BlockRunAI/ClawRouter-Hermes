@@ -147,6 +147,7 @@ def _setup(args: argparse.Namespace) -> None:
         print("  Install Node.js 18+ from https://nodejs.org and re-run setup.")
     else:
         print("✓ Node / npx detected.")
+        _install_clawrouter_proxy()
 
     if wallet.MNEMONIC_FILE.is_file():
         try:
@@ -206,6 +207,34 @@ def _ensure_local_api_key() -> None:
     prefix = existing.rstrip()
     suffix = "\n" if prefix else ""
     path.write_text(f"{prefix}{suffix}CLAWROUTER_API_KEY=clawrouter-local\n", encoding="utf-8")
+
+
+def _install_clawrouter_proxy() -> None:
+    """Ensure @blockrun/clawrouter proxy is installed and up to date."""
+    npm_dir = Path.home() / ".openclaw" / "npm"
+    npm_dir.mkdir(parents=True, exist_ok=True)
+
+    package_json = npm_dir / "package.json"
+    if not package_json.is_file():
+        package_json.write_text(json.dumps({"private": True}), encoding="utf-8")
+
+    print("Updating ClawRouter proxy…", end=" ", flush=True)
+    try:
+        result = subprocess.run(
+            ["npm", "install", "@blockrun/clawrouter@latest"],
+            cwd=str(npm_dir),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            print("done.")
+        else:
+            print(f"\n✗ npm install failed: {result.stderr.strip()[:200]}")
+            print("  The proxy will be installed on first use via npx.")
+    except Exception as exc:
+        print(f"\n✗ npm install failed: {exc}")
+        print("  The proxy will be installed on first use via npx.")
 
 
 def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
@@ -275,6 +304,14 @@ def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
             if current.get(key) != value:
                 current[key] = value
                 changed = True
+
+    model_cfg = config.setdefault("model", {})
+    if not isinstance(model_cfg, dict):
+        model_cfg = {}
+        config["model"] = model_cfg
+    if model_cfg.get("context_length") != 1_000_000:
+        model_cfg["context_length"] = 1_000_000
+        changed = True
 
     if changed or not path.exists():
         path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
