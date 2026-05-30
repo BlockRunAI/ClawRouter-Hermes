@@ -4,8 +4,11 @@ Design notes:
 - ``register(ctx)`` only *probes* the proxy; it never spawns at startup so
   Hermes' plugin discovery stays non-blocking.
 - ``ensure_running()`` is called by tool handlers and CLI subcommands on
-  first use. It probes, then spawns ``npx -y @blockrun/clawrouter --port
-  <port>`` if the port is free, falling through to 8403–8410 on collision.
+  first use. It probes, then spawns the proxy if the port is free, falling
+  through to 8403–8410 on collision. When ``setup`` has pre-installed the
+  proxy into ``~/.openclaw/npm`` it launches that binary directly (zero
+  download/link latency); otherwise it falls back to ``npx -y
+  @blockrun/clawrouter --port <port>``.
 - A background heartbeat thread restarts the subprocess on death (capped
   at 3 restarts per minute).
 - ``CLAWROUTER_PROXY_URL`` skips supervision entirely (service-managed
@@ -97,11 +100,38 @@ def _build_env() -> dict:
     return env
 
 
+def _local_proxy_bin() -> Optional[str]:
+    """Path to the proxy binary pre-installed by ``setup`` into
+    ``~/.openclaw/npm`` (see ``cli._install_clawrouter_proxy``), if present.
+
+    Invoking it directly skips ``npx``'s resolve/link-into-``_npx`` step, so a
+    warm pre-install gives a genuinely zero-download, zero-link first launch.
+    """
+    bin_path = (
+        state.STATE_DIR / "npm" / "node_modules" / ".bin" / "clawrouter"
+    )
+    return str(bin_path) if bin_path.is_file() else None
+
+
+def _spawn_cmd(port: int) -> tuple[list[str], Optional[str]]:
+    """Return ``(argv, cwd)`` for launching the proxy.
+
+    Prefer the pre-installed binary in ``~/.openclaw/npm`` (no download/link
+    latency); fall back to ``npx -y`` which resolves/installs on demand.
+    """
+    local = _local_proxy_bin()
+    if local is not None:
+        # cwd at the npm root so the bin shim resolves its own deps cleanly.
+        return [local, "--port", str(port)], str(state.STATE_DIR / "npm")
+    return ["npx", "-y", "@blockrun/clawrouter", "--port", str(port)], None
+
+
 def _spawn(port: int) -> subprocess.Popen:
-    cmd = ["npx", "-y", "@blockrun/clawrouter", "--port", str(port)]
+    cmd, cwd = _spawn_cmd(port)
     logger.info("Spawning ClawRouter proxy: %s", " ".join(cmd))
     return subprocess.Popen(
         cmd,
+        cwd=cwd,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL,
