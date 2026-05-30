@@ -22,6 +22,7 @@ from pathlib import Path
 
 from . import cli as _cli
 from . import commands, proxy_supervisor, schemas, tools
+from . import models as _models
 
 __all__ = ["register"]
 
@@ -55,8 +56,63 @@ def _install_compat() -> None:
     try:
         _cli.install_hermes_compat()
         _cli.patch_hermes_model_catalog()
+        _patch_telegram_model_labels()
     except Exception as exc:
         logger.debug("clawrouter: compatibility setup skipped: %s", exc)
+
+
+def _patch_telegram_model_labels() -> None:
+    """Mark free ClawRouter models in Telegram picker labels only."""
+    try:
+        from gateway.platforms import telegram
+    except Exception:
+        return
+
+    adapter = getattr(telegram, "TelegramAdapter", None)
+    if adapter is None or getattr(adapter, "_clawrouter_labels_patched", False):
+        return
+
+    inline_button = getattr(telegram, "InlineKeyboardButton", None)
+    inline_markup = getattr(telegram, "InlineKeyboardMarkup", None)
+    if inline_button is None or inline_markup is None:
+        return
+
+    def _build_model_keyboard(self, model_list: list, page: int) -> tuple:
+        page_size = self._MODEL_PAGE_SIZE
+        total = len(model_list)
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        page = max(0, min(page, total_pages - 1))
+
+        start = page * page_size
+        end = min(start + page_size, total)
+        page_models = model_list[start:end]
+
+        buttons = []
+        for i, model_id in enumerate(page_models):
+            abs_idx = start + i
+            buttons.append(
+                inline_button(_models.picker_label(str(model_id)), callback_data=f"mm:{abs_idx}")
+            )
+
+        rows = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+        if total_pages > 1:
+            nav = []
+            if page > 0:
+                nav.append(inline_button("◀ Prev", callback_data=f"mg:{page - 1}"))
+            nav.append(inline_button(f"{page + 1}/{total_pages}", callback_data="mx:noop"))
+            if page < total_pages - 1:
+                nav.append(inline_button("Next ▶", callback_data=f"mg:{page + 1}"))
+            rows.append(nav)
+
+        rows.append([
+            inline_button("◀ Back", callback_data="mb"),
+            inline_button("✗ Cancel", callback_data="mx"),
+        ])
+        page_info = f" ({start + 1}–{end} of {total})" if total_pages > 1 else ""
+        return inline_markup(rows), page_info
+
+    adapter._build_model_keyboard = _build_model_keyboard
+    adapter._clawrouter_labels_patched = True
 
 
 def _register_tools(ctx) -> None:

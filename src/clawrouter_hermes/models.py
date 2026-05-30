@@ -12,13 +12,10 @@ CHAT_MODELS = (
     "blockrun/free",
     "blockrun/eco",
     "blockrun/premium",
-    "auto",
-    "free",
-    "eco",
-    "premium",
     "openai/gpt-5.5",
     "openai/gpt-5.4",
     "openai/gpt-5-mini",
+    "anthropic/claude-opus-4.8",
     "anthropic/claude-opus-4.7",
     "anthropic/claude-sonnet-4.6",
     "google/gemini-2.5-pro",
@@ -30,9 +27,34 @@ CHAT_MODELS = (
     "xai/grok-code-fast-1",
     "minimax/minimax-m2.7",
     "nvidia/gpt-oss-120b",
+    "free/glm-4.7",
+    "free/qwen3-coder-480b",
 )
+
+FREE_MODELS = frozenset({
+    "blockrun/free",
+    "free",
+    "nvidia/gpt-oss-120b",
+    "free/glm-4.7",
+    "free/qwen3-coder-480b",
+})
 
 
 def chat_models() -> list[str]:
     """Return a mutable copy of the curated chat model catalog."""
-    return list(CHAT_MODELS)
+    return list(dict.fromkeys(CHAT_MODELS))
+
+
+def is_free_model(model_id: str) -> bool:
+    """Return True when a picker entry should be marked as free."""
+    return model_id in FREE_MODELS
+
+
+def picker_label(model_id: str) -> str:
+    """Return a compact Telegram button label without changing model IDs."""
+    short = model_id.split("/")[-1] if "/" in model_id else model_id
+    if is_free_model(model_id):
+        short = f"[FREE] {short}"
+    if len(short) > 38:
+        short = short[:35] + "..."
+    return short
