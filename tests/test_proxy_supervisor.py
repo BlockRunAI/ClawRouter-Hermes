@@ -67,3 +67,24 @@ def test_status_non_spawning(isolated_home, monkeypatch):
     status = proxy_supervisor.status()
     assert status.reachable is False
     assert status.base_url.startswith("http://127.0.0.1:")
+
+
+def test_spawn_cmd_falls_back_to_npx_when_no_local_bin(isolated_home):
+    from clawrouter_hermes import proxy_supervisor
+
+    cmd, cwd = proxy_supervisor._spawn_cmd(8402)
+    assert cmd == ["npx", "-y", "@blockrun/clawrouter", "--port", "8402"]
+    assert cwd is None
+
+
+def test_spawn_cmd_prefers_pre_installed_bin(isolated_home):
+    from clawrouter_hermes import proxy_supervisor, state
+
+    bin_dir = state.STATE_DIR / "npm" / "node_modules" / ".bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    bin_path = bin_dir / "clawrouter"
+    bin_path.write_text("#!/usr/bin/env node\n")
+
+    cmd, cwd = proxy_supervisor._spawn_cmd(8407)
+    assert cmd == [str(bin_path), "--port", "8407"]
+    assert cwd == str(state.STATE_DIR / "npm")
