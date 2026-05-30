@@ -252,10 +252,15 @@ def format_summary(summary: dict) -> str:
 
     evm = summary["evm"]
     sol = summary["solana"]
+
     return (
-        "🔐 ClawRouter wallet\n"
-        f"  Base    EVM: {evm['address']}  ({_fmt(evm['usdc_balance'])})\n"
-        f"  Solana :    {sol['address']}  ({_fmt(sol['usdc_balance'])})\n"
-        f"  Source:     {summary['source']}\n"
-        f"  Mnemonic:   {summary['mnemonic_path']}"
+        "💰 *ClawRouter Wallet*\n\n"
+        f"*Base*\n"
+        f"  `{evm['address']}`\n"
+        f"  {_fmt(evm['usdc_balance'])}\n\n"
+        f"*Solana*\n"
+        f"  `{sol['address']}`\n"
+        f"  {_fmt(sol['usdc_balance'])}\n\n"
+        f"_Source: {summary['source']}_ | "
+        f"Fund at [blockrun.ai/wallet](https://blockrun.ai/wallet)"
     )
