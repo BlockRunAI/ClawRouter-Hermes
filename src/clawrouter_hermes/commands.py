@@ -15,6 +15,8 @@ from . import proxy_supervisor, state, tools, wallet
 HELP_TEXT = (
     "ClawRouter commands:\n"
     "  /clawrouter wallet            Show address + USDC balance\n"
+    "  /clawrouter wallet base       Switch payment chain to Base\n"
+    "  /clawrouter wallet solana     Switch payment chain to Solana\n"
     "  /clawrouter stats             Show proxy usage stats\n"
     "  /clawrouter status            Show proxy health\n"
     "  /clawrouter route <eco|auto|premium>   Set routing profile\n"
@@ -22,7 +24,27 @@ HELP_TEXT = (
 )
 
 
-def _handle_wallet(_: str) -> str:
+def _handle_wallet(raw_args: str) -> str:
+    args = (raw_args or "").strip().lower()
+
+    if args in {"base", "solana"}:
+        try:
+            chain = wallet.set_payment_chain(args)
+        except ValueError as exc:
+            return f"❌ {exc}"
+
+        proxy_supervisor.stop()
+        status = proxy_supervisor.ensure_running()
+        if status.reachable:
+            addrs = wallet.load_addresses()
+            addr = addrs.evm if args == "base" else addrs.solana
+            return (
+                f"✅ Payment chain switched to *{chain.capitalize()}*.\n"
+                f"Proxy restarted.\n\n"
+                f"*{chain.capitalize()} Address:* `{addr}`"
+            )
+        return f"⚠️ Chain set to *{chain.capitalize()}* but proxy failed to restart. Run `/clawrouter status`."
+
     return wallet.format_summary(wallet.wallet_summary())
 
 
