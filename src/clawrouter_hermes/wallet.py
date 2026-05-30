@@ -262,6 +262,5 @@ def format_summary(summary: dict) -> str:
         f"*Solana*\n"
         f"  `{sol['address']}`\n"
         f"  {_fmt(sol['usdc_balance'])}\n"
-        f"  [View on Solscan](https://solscan.io/account/{sol['address']})\n\n"
-        f"_Source: {summary['source']}_"
+        f"  [View on Solscan](https://solscan.io/account/{sol['address']})"
     )
