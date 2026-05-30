@@ -34,6 +34,8 @@ def _handle_wallet(raw_args: str) -> str:
             return f"❌ {exc}"
 
         proxy_supervisor.stop()
+        import time
+        time.sleep(2)
         status = proxy_supervisor.ensure_running()
         if status.reachable:
             addrs = wallet.load_addresses()
