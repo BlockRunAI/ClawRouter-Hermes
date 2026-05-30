@@ -276,6 +276,14 @@ def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
                 current[key] = value
                 changed = True
 
+    model_cfg = config.setdefault("model", {})
+    if not isinstance(model_cfg, dict):
+        model_cfg = {}
+        config["model"] = model_cfg
+    if model_cfg.get("context_length") != 1_000_000:
+        model_cfg["context_length"] = 1_000_000
+        changed = True
+
     if changed or not path.exists():
         path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     return changed
