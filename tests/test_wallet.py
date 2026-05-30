@@ -78,3 +78,30 @@ def test_format_summary_error_path(isolated_home):
     out = wallet.format_summary({"ok": False, "error": "boom"})
     assert "❌" in out
     assert "boom" in out
+
+
+def test_payment_chain_defaults_to_base(isolated_home):
+    from clawrouter_hermes import wallet
+
+    # No file written yet → proxy's loadPaymentChain() also defaults to "base".
+    assert wallet.current_payment_chain() == "base"
+
+
+def test_payment_chain_round_trip(isolated_home):
+    from clawrouter_hermes import wallet
+
+    # Mixed case / surrounding space must normalize to the bare lowercase token
+    # the proxy's loadPaymentChain() compares against (content.trim() == "solana").
+    assert wallet.set_payment_chain("  Solana ") == "solana"
+    assert wallet.CHAIN_FILE.read_text(encoding="utf-8") == "solana"
+    assert wallet.current_payment_chain() == "solana"
+
+    assert wallet.set_payment_chain("base") == "base"
+    assert wallet.current_payment_chain() == "base"
+
+
+def test_set_payment_chain_rejects_unknown(isolated_home):
+    from clawrouter_hermes import wallet
+
+    with pytest.raises(ValueError, match="Unknown chain"):
+        wallet.set_payment_chain("ethereum")
