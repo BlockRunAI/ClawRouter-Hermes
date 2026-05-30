@@ -240,6 +240,34 @@ def wallet_summary() -> dict:
     }
 
 
+CHAIN_FILE = _wallet_dir() / "payment-chain"
+
+VALID_CHAINS = {"base", "solana"}
+
+
+def current_payment_chain() -> str:
+    """Return the active payment chain ('base' or 'solana')."""
+    try:
+        return CHAIN_FILE.read_text(encoding="utf-8").strip().lower() or "base"
+    except OSError:
+        return "base"
+
+
+def set_payment_chain(chain: str) -> str:
+    """Persist a new payment chain, return the confirmed value.
+
+    Raises ``ValueError`` for unknown chain names.
+    """
+    chain = chain.strip().lower()
+    if chain not in VALID_CHAINS:
+        raise ValueError(
+            f"Unknown chain '{chain}'. Valid: {', '.join(sorted(VALID_CHAINS))}"
+        )
+    CHAIN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CHAIN_FILE.write_text(chain, encoding="utf-8")
+    return chain
+
+
 def format_summary(summary: dict) -> str:
     """Pretty-print ``wallet_summary()`` output for terminals and chat."""
     if not summary.get("ok"):
@@ -252,10 +280,15 @@ def format_summary(summary: dict) -> str:
 
     evm = summary["evm"]
     sol = summary["solana"]
+
     return (
-        "🔐 ClawRouter wallet\n"
-        f"  Base    EVM: {evm['address']}  ({_fmt(evm['usdc_balance'])})\n"
-        f"  Solana :    {sol['address']}  ({_fmt(sol['usdc_balance'])})\n"
-        f"  Source:     {summary['source']}\n"
-        f"  Mnemonic:   {summary['mnemonic_path']}"
+        "💰 *ClawRouter Wallet*\n\n"
+        f"*Base*\n"
+        f"  `{evm['address']}`\n"
+        f"  {_fmt(evm['usdc_balance'])}\n"
+        f"  [View on BaseScan](https://basescan.org/address/{evm['address']})\n\n"
+        f"*Solana*\n"
+        f"  `{sol['address']}`\n"
+        f"  {_fmt(sol['usdc_balance'])}\n"
+        f"  [View on Solscan](https://solscan.io/account/{sol['address']})"
     )
