@@ -210,22 +210,18 @@ def _ensure_local_api_key() -> None:
 
 
 def _install_clawrouter_proxy() -> None:
-    """Pre-install the @blockrun/clawrouter proxy so /model is instant."""
+    """Ensure @blockrun/clawrouter proxy is installed and up to date."""
     npm_dir = Path.home() / ".openclaw" / "npm"
-    package_json = npm_dir / "package.json"
-    installed_marker = npm_dir / "node_modules" / "@blockrun" / "clawrouter"
-    if installed_marker.is_dir() and package_json.is_file():
-        print("✓ ClawRouter proxy already installed.")
-        return
-
     npm_dir.mkdir(parents=True, exist_ok=True)
+
+    package_json = npm_dir / "package.json"
     if not package_json.is_file():
         package_json.write_text(json.dumps({"private": True}), encoding="utf-8")
 
-    print("Installing ClawRouter proxy…", end=" ", flush=True)
+    print("Updating ClawRouter proxy…", end=" ", flush=True)
     try:
         result = subprocess.run(
-            ["npm", "install", "@blockrun/clawrouter"],
+            ["npm", "install", "@blockrun/clawrouter@latest"],
             cwd=str(npm_dir),
             capture_output=True,
             text=True,
