@@ -78,6 +78,8 @@ def test_wallet_switch_chain_restarts_and_persists(isolated_home, monkeypatch):
     out = commands.clawrouter_dispatch("wallet solana")
     assert "Solana" in out
     assert "SOLADDR" in out
+    # Switch is machine-wide (shared wallet), not Hermes-local — say so.
+    assert "all ClawRouter clients" in out
     # The file the proxy reads on restart must reflect the new chain.
     assert commands.wallet.current_payment_chain() == "solana"
 
@@ -93,6 +95,7 @@ def test_wallet_switch_chain_proxy_restart_fails(isolated_home, monkeypatch):
 
     out = commands.clawrouter_dispatch("wallet base")
     assert "⚠️" in out
+    assert "machine-wide" in out
     # Chain is still persisted even when the restart fails.
     assert commands.wallet.current_payment_chain() == "base"
 

@@ -41,11 +41,15 @@ def _handle_wallet(raw_args: str) -> str:
             addrs = wallet.load_addresses()
             addr = addrs.evm if args == "base" else addrs.solana
             return (
-                f"✅ Payment chain switched to *{chain.capitalize()}*.\n"
+                f"✅ Payment chain switched to *{chain.capitalize()}* for all "
+                f"ClawRouter clients on this machine (shared wallet).\n"
                 f"Proxy restarted.\n\n"
                 f"*{chain.capitalize()} Address:* `{addr}`"
             )
-        return f"⚠️ Chain set to *{chain.capitalize()}* but proxy failed to restart. Run `/clawrouter status`."
+        return (
+            f"⚠️ Chain set to *{chain.capitalize()}* (machine-wide) but the proxy "
+            f"failed to restart. Run `/clawrouter status`."
+        )
 
     return wallet.format_summary(wallet.wallet_summary())
 

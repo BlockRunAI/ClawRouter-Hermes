@@ -280,6 +280,7 @@ def format_summary(summary: dict) -> str:
 
     evm = summary["evm"]
     sol = summary["solana"]
+    active = current_payment_chain()
 
     return (
         "💰 *ClawRouter Wallet*\n\n"
@@ -290,5 +291,9 @@ def format_summary(summary: dict) -> str:
         f"*Solana*\n"
         f"  `{sol['address']}`\n"
         f"  {_fmt(sol['usdc_balance'])}\n"
-        f"  [View on Solscan](https://solscan.io/account/{sol['address']})"
+        f"  [View on Solscan](https://solscan.io/account/{sol['address']})\n\n"
+        f"Paying on *{active.capitalize()}* · switch with "
+        f"`/clawrouter wallet base|solana` (affects all ClawRouter clients).\n"
+        f"_Shared with OpenClaw if installed. Back up your mnemonic — it "
+        f"controls your funds: {summary['mnemonic_path']}_"
     )
