@@ -26,6 +26,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from typing import Optional
 
 import httpx
@@ -33,6 +34,15 @@ import httpx
 from . import state
 
 logger = logging.getLogger(__name__)
+
+try:
+    _PLUGIN_VERSION = _pkg_version("hermes-plugin-clawrouter")
+except PackageNotFoundError:  # source checkout without installed dist metadata
+    _PLUGIN_VERSION = "0"
+
+# Folded into the proxy's outbound User-Agent (it reads CLAWROUTER_CLIENT) so
+# BlockRun can attribute traffic to Hermes: `clawrouter/<v> hermes-plugin/<v>`.
+_CLIENT_TAG = f"hermes-plugin/{_PLUGIN_VERSION}"
 
 _PROBE_TIMEOUT_S = 0.5
 _SPAWN_TIMEOUT_S = 30.0
@@ -97,6 +107,9 @@ def _node_available() -> bool:
 def _build_env() -> dict:
     env = dict(os.environ)
     env.setdefault("CLAWROUTER_ROUTING_PROFILE", state.get_profile())
+    # Tag the proxy's User-Agent as Hermes-originated. setdefault so an explicit
+    # user-set CLAWROUTER_CLIENT wins.
+    env.setdefault("CLAWROUTER_CLIENT", _CLIENT_TAG)
     return env
 
 
