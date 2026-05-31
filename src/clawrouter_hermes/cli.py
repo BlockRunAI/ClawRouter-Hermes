@@ -149,18 +149,23 @@ def _setup(args: argparse.Namespace) -> None:
         print("✓ Node / npx detected.")
         _install_clawrouter_proxy()
 
+    wallet_dir = wallet.MNEMONIC_FILE.parent
     if wallet.MNEMONIC_FILE.is_file():
         try:
             addrs = wallet.load_addresses()
             print(f"✓ Wallet detected — EVM {addrs.evm}")
             print(f"               Solana {addrs.solana}")
+            print(f"  Stored at {wallet_dir} (shared with OpenClaw if you use it).")
+            print("  Your mnemonic controls your funds — back it up.")
             print("  Fund USDC on Base or Solana (≥$5 covers thousands of requests).")
         except Exception as exc:
             print(f"✗ Wallet file present but unreadable: {exc}")
     else:
-        print("✗ No wallet found.")
-        print(f"  Expected: {wallet.MNEMONIC_FILE}")
-        print("  Run: npx @blockrun/clawrouter setup")
+        print("ℹ No wallet yet — ClawRouter will auto-create one on first use at:")
+        print(f"    {wallet_dir}")
+        print("  This wallet is shared with OpenClaw if you also use it. Once")
+        print("  created, your mnemonic controls your funds — back it up.")
+        print("  To create or import one now: npx @blockrun/clawrouter setup")
 
     print()
     print("Next: restart any running Hermes gateway, then choose ClawRouter in /model or run:")

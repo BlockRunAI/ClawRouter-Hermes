@@ -80,6 +80,26 @@ def test_format_summary_error_path(isolated_home):
     assert "boom" in out
 
 
+def test_format_summary_surfaces_shared_wallet_and_backup(isolated_home):
+    from clawrouter_hermes import wallet
+
+    summary = {
+        "ok": True,
+        "source": "file",
+        "evm": {"address": "0xabc", "usdc_balance": 1.0, "chain": "base"},
+        "solana": {"address": "SoLabc", "usdc_balance": None, "chain": "solana"},
+        "mnemonic_path": "/home/u/.openclaw/blockrun/mnemonic",
+    }
+    out = wallet.format_summary(summary)
+    # Transparency: shared with OpenClaw, where the keys live, and backup nudge.
+    assert "OpenClaw" in out
+    assert "Back up your mnemonic" in out
+    assert summary["mnemonic_path"] in out
+    # Active payment chain + that switching is machine-wide.
+    assert "Paying on" in out
+    assert "all ClawRouter clients" in out
+
+
 def test_payment_chain_defaults_to_base(isolated_home):
     from clawrouter_hermes import wallet
 
