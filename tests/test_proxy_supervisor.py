@@ -88,3 +88,20 @@ def test_spawn_cmd_prefers_pre_installed_bin(isolated_home):
     cmd, cwd = proxy_supervisor._spawn_cmd(8407)
     assert cmd == [str(bin_path), "--port", "8407"]
     assert cwd == str(state.STATE_DIR / "npm")
+
+
+def test_build_env_tags_user_agent_as_hermes(isolated_home, monkeypatch):
+    from clawrouter_hermes import proxy_supervisor
+
+    monkeypatch.delenv("CLAWROUTER_CLIENT", raising=False)
+    env = proxy_supervisor._build_env()
+    # The proxy folds this into its User-Agent → clawrouter/<v> hermes-plugin/<v>.
+    assert env["CLAWROUTER_CLIENT"].startswith("hermes-plugin/")
+
+
+def test_build_env_respects_explicit_client_override(isolated_home, monkeypatch):
+    from clawrouter_hermes import proxy_supervisor
+
+    monkeypatch.setenv("CLAWROUTER_CLIENT", "custom-host/9.9")
+    env = proxy_supervisor._build_env()
+    assert env["CLAWROUTER_CLIENT"] == "custom-host/9.9"
