@@ -62,7 +62,7 @@ _STATIC_FALLBACKS = (
     "zai/glm-5.1",
     "xai/grok-4-1-fast-reasoning",
     "xai/grok-code-fast-1",
-    "minimax/minimax-m2.7",
+    "minimax/minimax-m3",
     "nvidia/gpt-oss-120b",
     "free/glm-4.7",
     "nvidia/qwen3-coder-480b",
@@ -101,7 +101,7 @@ clawrouter = ClawRouterProfile(
     models_url=f"{_read_base_url()}/models",
     auth_type="api_key",
     fallback_models=_STATIC_FALLBACKS,
-    default_aux_model="blockrun/auto",
+    default_aux_model="",
     default_headers={
         "X-Hermes-Plugin": "clawrouter",
     },

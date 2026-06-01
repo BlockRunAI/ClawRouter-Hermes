@@ -318,6 +318,14 @@ def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
         model_cfg["context_length"] = 1_000_000
         changed = True
 
+    compression_cfg = config.setdefault("compression", {})
+    if not isinstance(compression_cfg, dict):
+        compression_cfg = {}
+        config["compression"] = compression_cfg
+    if compression_cfg.get("threshold") != 0.20:
+        compression_cfg["threshold"] = 0.20
+        changed = True
+
     if changed or not path.exists():
         path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     return changed
