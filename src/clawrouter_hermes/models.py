@@ -25,7 +25,7 @@ CHAT_MODELS = (
     "zai/glm-5.1",
     "xai/grok-4-1-fast-reasoning",
     "xai/grok-code-fast-1",
-    "minimax/minimax-m2.7",
+    "minimax/minimax-m3",
     "nvidia/gpt-oss-120b",
     "free/glm-4.7",
     "nvidia/qwen3-coder-480b",
