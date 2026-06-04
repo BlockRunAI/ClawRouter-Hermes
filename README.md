@@ -83,6 +83,18 @@ Set `BLOCKRUN_WALLET_KEY=<0x raw EVM hex>` to bypass the mnemonic file (EVM-only
 | `BLOCKRUN_WALLET_KEY` | Raw EVM hex private key — overrides the mnemonic file. |
 | `CLAWROUTER_ROUTING_PROFILE` | `eco` / `auto` / `premium`. Forwarded to the proxy on spawn. |
 
+## Guides
+
+Troubleshooting and how-to articles for common Hermes provider/vision setups. Each
+is a standalone problem→solution walkthrough:
+
+| Guide | When you need it |
+|---|---|
+| [`vision_analyze` "Connection error" on a custom provider](docs/01-vision-analyze-connection-error-custom-provider.md) | Chat works but `vision_analyze` returns `Connection error` on a custom OpenAI-compatible endpoint ([hermes-agent#38679](https://github.com/NousResearch/hermes-agent/issues/38679)) |
+| [Auxiliary vision falls back to "auto" with an OAuth provider](docs/02-oauth-vision-provider-falls-back-to-auto.md) | `auxiliary.vision.provider` (e.g. `minimax-oauth`) logs `unhandled auth_type` and silently degrades ([#38685](https://github.com/NousResearch/hermes-agent/issues/38685)) |
+| [Run GPT-5, Claude, Gemini & DeepSeek from one endpoint](docs/03-one-endpoint-gpt-claude-gemini-deepseek.md) | You want many models in Hermes without a separate provider/key block per model |
+| [Pay-per-call LLM access — no API keys](docs/04-pay-per-call-llm-no-api-keys-hermes.md) | You'd rather pay per request with USDC than manage and rotate provider API keys |
+
 ## How it works
 
 1. `hermes` starts → the entry-point plugin is loaded → `register(ctx)` wires tools, slash commands, CLI, and the skill.
