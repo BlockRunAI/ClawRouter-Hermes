@@ -35,6 +35,31 @@ Tools (callable from chat):
 - `clawrouter_video_generate` — Seedance, Grok Imagine
 - `clawrouter_web_search` — Exa-powered
 
+### Auxiliary vision
+
+Hermes' `vision_analyze` builds a *separate* OpenAI client for the configured
+`auxiliary.vision` provider. That path is fragile for remote custom endpoints
+([hermes-agent#38679](https://github.com/NousResearch/hermes-agent/issues/38679):
+`Connection error`) and for OAuth providers
+([#38685](https://github.com/NousResearch/hermes-agent/issues/38685): silent fallback
+to `auto`). Routing vision through ClawRouter sidesteps both — it's a single
+`api_key` provider on `127.0.0.1`, so there's no OAuth branch to miss and no remote
+TLS handshake to mishandle. Add to `~/.hermes/config.yaml`:
+
+```yaml
+auxiliary:
+  vision:
+    provider: clawrouter
+    model: blockrun/auto          # or google/gemini-2.5-pro, anthropic/claude-sonnet-4.6
+    base_url: http://127.0.0.1:8402/v1
+    api_key: clawrouter-local
+    timeout: 120
+```
+
+`setup` does **not** write this automatically — it would overwrite an existing vision
+config — so add it by hand if you want vision through ClawRouter, then
+`hermes gateway restart`.
+
 ## Wallet
 
 The plugin **reads** the canonical wallet at `~/.openclaw/blockrun/mnemonic` (24-word BIP-39 phrase, mode 0o600). To create one:
