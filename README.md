@@ -94,6 +94,7 @@ is a standalone problem→solution walkthrough:
 | [Auxiliary vision falls back to "auto" with an OAuth provider](docs/02-oauth-vision-provider-falls-back-to-auto.md) | `auxiliary.vision.provider` (e.g. `minimax-oauth`) logs `unhandled auth_type` and silently degrades ([#38685](https://github.com/NousResearch/hermes-agent/issues/38685)) |
 | [Run GPT-5, Claude, Gemini & DeepSeek from one endpoint](docs/03-one-endpoint-gpt-claude-gemini-deepseek.md) | You want many models in Hermes without a separate provider/key block per model |
 | [Pay-per-call LLM access — no API keys](docs/04-pay-per-call-llm-no-api-keys-hermes.md) | You'd rather pay per request with USDC than manage and rotate provider API keys |
+| [Behind an HTTP proxy/VPN: timeouts, 500s, `Premature close`](docs/05-proxy-vpn-timeouts-premature-close.md) | Small requests work but large agentic requests 500 or time out after payment — your proxy (mihomo/clash/corporate) isn't being used by ClawRouter's upstream traffic |
 
 ## How it works
 
