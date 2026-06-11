@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-plugin-clawrouter"
-version = "0.3.5"
+version = "0.3.6"
 description = "ClawRouter for Hermes — 55+ models, x402 USDC micropayments, smart routing"
 readme = "README.md"
 license = { text = "MIT" }
