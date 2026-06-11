@@ -95,6 +95,7 @@ is a standalone problem→solution walkthrough:
 | [Run GPT-5, Claude, Gemini & DeepSeek from one endpoint](docs/03-one-endpoint-gpt-claude-gemini-deepseek.md) | You want many models in Hermes without a separate provider/key block per model |
 | [Pay-per-call LLM access — no API keys](docs/04-pay-per-call-llm-no-api-keys-hermes.md) | You'd rather pay per request with USDC than manage and rotate provider API keys |
 | [Behind an HTTP proxy/VPN: timeouts, 500s, `Premature close`](docs/05-proxy-vpn-timeouts-premature-close.md) | Small requests work but large agentic requests 500 or time out after payment — your proxy (mihomo/clash/corporate) isn't being used by ClawRouter's upstream traffic |
+| [Retry-and-repay loop: `Invalid character in header content ["x-clawrouter-reasoning"]`](docs/06-invalid-character-header-cyrillic-reasoning.md) | Non-English prompts (Cyrillic/CJK) on ClawRouter ≤ 0.12.207 crash response delivery after payment settles; Hermes retries and re-pays the same request |
 
 ## How it works
 
