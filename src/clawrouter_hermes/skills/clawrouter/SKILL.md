@@ -158,7 +158,7 @@ Rules handle ~80% of requests in <1ms. Only ambiguous queries hit the LLM classi
 
 ## Available Models
 
-55+ models including: gpt-5.5, gpt-5.4, gpt-4o, o3, claude-opus-4.7, claude-opus-4.6, claude-opus-4.5, claude-sonnet-4.6, gemini-3.1-pro, gemini-3.5-flash, deepseek-v4-pro, deepseek-chat, grok-4.3, grok-build-0.1, kimi-k2.6, kimi-k2.5, and 10 free NVIDIA models (gpt-oss-120b [default], gpt-oss-20b, mistral-small-4-119b, deepseek-v4-pro, deepseek-v4-flash, qwen3-next-80b-a3b-thinking, qwen3-coder-480b, glm-4.7, llama-4-maverick, nemotron-3-nano-omni-30b-a3b-reasoning [vision]).
+55+ models including: gpt-5.5, gpt-5.4, gpt-5-mini, claude-opus-4.8, claude-opus-4.7, claude-sonnet-4.6, gemini-3.1-pro, gemini-3.5-flash, deepseek-v4-pro, deepseek-chat, glm-5.1, grok-4.3, grok-build-0.1, kimi-k2.6, minimax-m3, and the curated free models (gpt-oss-120b, gpt-oss-20b, mistral-large-3-675b, qwen3.5-122b-a10b, llama-4-maverick, qwen3-coder-480b, nemotron-3-nano-omni-30b-a3b-reasoning [vision]).
 
 ## Built-in Agent Tools
 

@@ -9,6 +9,14 @@ fi
 
 PLUGIN_NAME="${HERMES_CLAWROUTER_PLUGIN_NAME:-clawrouter}"
 BROKEN_HERMES_TARGET=""
+# find_hermes_python() runs inside a command substitution (subshell), so it
+# cannot export a broken-launcher path back to main() via a variable. Stash it
+# in a temp file instead and read it back in the parent shell.
+BROKEN_HERMES_TARGET_FILE="$(mktemp 2>/dev/null || true)"
+cleanup() {
+  [[ -n "$BROKEN_HERMES_TARGET_FILE" && -f "$BROKEN_HERMES_TARGET_FILE" ]] && rm -f "$BROKEN_HERMES_TARGET_FILE"
+}
+trap cleanup EXIT
 
 log() { printf '%s\n' "$*"; }
 warn() { printf 'WARN: %s\n' "$*" >&2; }
@@ -246,6 +254,9 @@ find_hermes_python() {
         fi
       else
         BROKEN_HERMES_TARGET="$target"
+        if [[ -n "$BROKEN_HERMES_TARGET_FILE" ]]; then
+          printf '%s\n' "$target" > "$BROKEN_HERMES_TARGET_FILE"
+        fi
       fi
     fi
 
@@ -349,11 +360,17 @@ install_into_venv() {
   local py="$1"
   log "Installing $PKG_SPEC into Hermes environment: $py"
   ensure_venv_pip "$py"
-  "$py" -m pip install --upgrade pip wheel >/dev/null
-  "$py" -m pip install --upgrade "$PKG_SPEC"
+  "$py" -m pip install --upgrade pip wheel >/dev/null || true
+  if ! "$py" -m pip install --upgrade "$PKG_SPEC"; then
+    warn "pip failed to install $PKG_SPEC into $py."
+    return 1
+  fi
   ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
   enable_plugin "$py"
-  run_clawrouter_cli "$py" setup --force
+  if ! run_clawrouter_cli "$py" setup --force; then
+    warn "ClawRouter setup failed under $py."
+    return 1
+  fi
   log "Running doctor (warnings are OK if the wallet is not funded yet)..."
   run_clawrouter_cli "$py" doctor || true
 }
@@ -398,9 +415,11 @@ main() {
 
   local hermes_py
   if hermes_py="$(find_hermes_python)"; then
-    install_into_venv "$hermes_py"
-    log "Done. Restart Hermes, then choose blockrun/auto in /model."
-    return 0
+    if install_into_venv "$hermes_py"; then
+      log "Done. Restart Hermes, then choose blockrun/auto in /model."
+      return 0
+    fi
+    warn "Installing into Hermes' venv did not complete; trying pipx fallback..."
   fi
 
   repair_broken_hermes_launcher
@@ -408,6 +427,12 @@ main() {
   if install_with_pipx; then
     log "Done. Restart Hermes, then choose blockrun/auto in /model."
     return 0
+  fi
+
+  # find_hermes_python ran in a subshell, so recover the broken-launcher path
+  # it may have stashed for us.
+  if [[ -z "$BROKEN_HERMES_TARGET" && -n "$BROKEN_HERMES_TARGET_FILE" && -s "$BROKEN_HERMES_TARGET_FILE" ]]; then
+    IFS= read -r BROKEN_HERMES_TARGET < "$BROKEN_HERMES_TARGET_FILE" || true
   fi
 
   if [[ -n "$BROKEN_HERMES_TARGET" ]]; then
