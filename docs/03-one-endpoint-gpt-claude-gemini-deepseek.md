@@ -59,9 +59,7 @@ holds the upstream keys and routes each request to the right model.
 for this, and it ships as a Hermes plugin:
 
 ```bash
-pip install hermes-plugin-clawrouter
-hermes plugins enable clawrouter
-hermes-clawrouter setup
+curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash
 hermes-clawrouter doctor
 ```
 
@@ -123,9 +121,7 @@ the picker. The localhost + pay-per-call specifics are ClawRouter's.)
 
 ```bash
 # 1. Install + enable
-pip install hermes-plugin-clawrouter
-hermes plugins enable clawrouter
-hermes-clawrouter setup
+curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash
 
 # 2. Verify everything is wired
 hermes-clawrouter doctor

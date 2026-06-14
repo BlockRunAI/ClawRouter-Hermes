@@ -6,12 +6,31 @@ Wraps the existing [ClawRouter](https://github.com/BlockRunAI/ClawRouter) TypeSc
 
 ## Install
 
+Recommended one-command installer:
+
 ```bash
-pip install hermes-plugin-clawrouter
+curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash
+```
+
+The installer avoids Debian/Ubuntu's `externally-managed-environment` / PEP 668
+trap by installing the plugin into Hermes' own Python environment instead of
+system Python. It then enables the plugin, runs setup, and prints doctor checks.
+
+Manual install is still fine if you already know where Hermes' Python environment
+lives:
+
+```bash
+~/.hermes/hermes-agent/venv/bin/python -m pip install -U hermes-plugin-clawrouter
 hermes plugins enable clawrouter
 hermes-clawrouter setup
 hermes-clawrouter doctor
 ```
+
+If `pip install hermes-plugin-clawrouter` shows `externally-managed-environment`,
+do **not** use `--break-system-packages`. Use the installer above, or run pip from
+Hermes' venv as shown. If `hermes` says `~/.hermes/hermes-agent/venv/bin/hermes:
+No such file or directory`, reinstall/repair Hermes first, then rerun the
+ClawRouter installer.
 
 `setup` writes the model-provider plugin to `~/.hermes/plugins/model-providers/clawrouter/`, seeds `CLAWROUTER_API_KEY=clawrouter-local` in `~/.hermes/.env`, and registers ClawRouter in `~/.hermes/config.yaml` so Hermes' `/model` picker can show the provider and curated BlockRun chat models.
 

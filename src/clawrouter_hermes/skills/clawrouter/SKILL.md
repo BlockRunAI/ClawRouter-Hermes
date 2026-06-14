@@ -42,12 +42,24 @@ metadata:
 
 ## Quick Start (Hermes plugin)
 
+Recommended:
+
 ```bash
-pip install hermes-plugin-clawrouter
+curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash
+```
+
+Manual install, if you know Hermes' Python venv path:
+
+```bash
+~/.hermes/hermes-agent/venv/bin/python -m pip install -U hermes-plugin-clawrouter
 hermes plugins enable clawrouter
 hermes clawrouter setup       # installs the model-provider plugin + verifies wallet
 hermes clawrouter doctor      # green = ready
 ```
+
+If plain `pip install hermes-plugin-clawrouter` fails with Debian/Ubuntu's
+`externally-managed-environment`, do not use `--break-system-packages`; install
+into Hermes' venv or use the one-command installer.
 
 Then in a Hermes chat session:
 

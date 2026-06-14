@@ -504,3 +504,7 @@ def main(argv: list[str] | None = None) -> None:
     register_cli(parser)
     args = parser.parse_args(argv)
     clawrouter_command(args)
+
+
+if __name__ == "__main__":
+    main()
