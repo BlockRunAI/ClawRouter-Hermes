@@ -27,16 +27,24 @@ CHAT_MODELS = (
     "xai/grok-4.3",
     "xai/grok-build-0.1",
     "minimax/minimax-m3",
-    "nvidia/gpt-oss-120b",
-    "free/glm-4.7",
-    "nvidia/qwen3-coder-480b",
+    "free/gpt-oss-120b",
+    "free/gpt-oss-20b",
+    "free/mistral-large-3-675b",
+    "free/qwen3.5-122b-a10b",
+    "free/llama-4-maverick",
+    "free/qwen3-coder-480b",
+    "free/nemotron-3-nano-omni-30b-a3b-reasoning",
 )
 
 FREE_MODELS = frozenset({
     "blockrun/free",
-    "nvidia/gpt-oss-120b",
-    "free/glm-4.7",
-    "nvidia/qwen3-coder-480b",
+    "free/gpt-oss-120b",
+    "free/gpt-oss-20b",
+    "free/mistral-large-3-675b",
+    "free/qwen3.5-122b-a10b",
+    "free/llama-4-maverick",
+    "free/qwen3-coder-480b",
+    "free/nemotron-3-nano-omni-30b-a3b-reasoning",
 })
 
 
@@ -47,7 +55,11 @@ def chat_models() -> list[str]:
 
 def is_free_model(model_id: str) -> bool:
     """Return True when a picker entry should be marked as free."""
-    return model_id in FREE_MODELS
+    return (
+        model_id == "blockrun/free"
+        or model_id.startswith("free/")
+        or model_id in FREE_MODELS
+    )
 
 
 def picker_label(model_id: str) -> str:

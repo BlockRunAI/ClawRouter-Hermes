@@ -353,7 +353,7 @@ install_into_venv() {
   "$py" -m pip install --upgrade "$PKG_SPEC"
   ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
   enable_plugin "$py"
-  run_clawrouter_cli "$py" setup
+  run_clawrouter_cli "$py" setup --force
   log "Running doctor (warnings are OK if the wallet is not funded yet)..."
   run_clawrouter_cli "$py" doctor || true
 }
@@ -379,11 +379,11 @@ install_with_pipx() {
   ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
 
   if [[ -x "$cli" ]]; then
-    "$cli" setup
+    "$cli" setup --force
     log "Running doctor (warnings are OK if the wallet is not funded yet)..."
     "$cli" doctor || true
   elif have hermes-clawrouter; then
-    hermes-clawrouter setup
+    hermes-clawrouter setup --force
     log "Running doctor (warnings are OK if the wallet is not funded yet)..."
     hermes-clawrouter doctor || true
   else

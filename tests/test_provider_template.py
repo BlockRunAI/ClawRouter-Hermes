@@ -43,6 +43,11 @@ def test_provider_init_template_calls_register_provider():
     assert "CLAWROUTER_API_KEY" in text
 
 
+def test_provider_template_uses_curated_picker_catalog_only():
+    text = _template_dir().joinpath("init.py.tmpl").read_text(encoding="utf-8")
+    assert "models_url" not in text
+
+
 def test_template_fallbacks_match_chat_models():
     """The materialized provider's fallback_models must stay in sync with the
     curated picker catalog in models.py. The template is copied verbatim (no
@@ -51,6 +56,15 @@ def test_template_fallbacks_match_chat_models():
     from clawrouter_hermes import models
 
     assert _template_static_fallbacks() == tuple(models.chat_models())
+
+
+def test_curated_picker_catalog_contains_free_models():
+    from clawrouter_hermes import models
+
+    chat_models = models.chat_models()
+    free_models = [model for model in chat_models if models.is_free_model(model)]
+    assert "blockrun/free" in free_models
+    assert any(model.startswith("free/") for model in free_models)
 
 
 def test_materialize_writes_correct_filenames(tmp_path, monkeypatch):
