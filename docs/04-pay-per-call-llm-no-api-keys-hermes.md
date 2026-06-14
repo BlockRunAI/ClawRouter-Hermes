@@ -52,7 +52,17 @@ runs a local OpenAI-compatible gateway that signs an x402 payment for each upstr
 call and routes to 55+ models:
 
 ```bash
-pip install hermes-plugin-clawrouter
+curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash
+```
+
+That installer checks for Python, pip/venv support, `pipx`, and Node/npm/npx,
+installs missing basics on common package managers, and puts the plugin into
+Hermes' own Python environment to avoid the Debian/Ubuntu
+`externally-managed-environment` error from system `pip`. If you prefer manual
+install, run pip from Hermes' venv instead:
+
+```bash
+~/.hermes/hermes-agent/venv/bin/python -m pip install -U hermes-plugin-clawrouter
 hermes plugins enable clawrouter
 hermes-clawrouter setup
 ```

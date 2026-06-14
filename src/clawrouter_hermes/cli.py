@@ -449,7 +449,7 @@ def _doctor(_: argparse.Namespace) -> None:
     key_ok, key_detail = _check_api_key_present()
     rows.append(("CLAWROUTER_API_KEY available", key_ok, key_detail))
 
-    proxy_status = proxy_supervisor.status()
+    proxy_status = proxy_supervisor.ensure_running()
     rows.append(
         ("Proxy reachable",
          proxy_status.reachable,
@@ -504,3 +504,7 @@ def main(argv: list[str] | None = None) -> None:
     register_cli(parser)
     args = parser.parse_args(argv)
     clawrouter_command(args)
+
+
+if __name__ == "__main__":
+    main()
