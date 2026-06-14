@@ -12,9 +12,11 @@ Recommended one-command installer:
 curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash
 ```
 
-The installer avoids Debian/Ubuntu's `externally-managed-environment` / PEP 668
-trap by installing the plugin into Hermes' own Python environment instead of
-system Python. It then enables the plugin, runs setup, and prints doctor checks.
+The installer checks for Python, pip/venv support, `pipx`, and Node/npm/npx. On
+common Linux/macOS package managers it installs missing basics, avoids
+Debian/Ubuntu's `externally-managed-environment` / PEP 668 trap by installing the
+plugin into Hermes' own Python environment, then enables the plugin, runs setup,
+and prints doctor checks.
 
 Manual install is still fine if you already know where Hermes' Python environment
 lives:

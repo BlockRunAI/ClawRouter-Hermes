@@ -59,7 +59,9 @@ hermes clawrouter doctor      # green = ready
 
 If plain `pip install hermes-plugin-clawrouter` fails with Debian/Ubuntu's
 `externally-managed-environment`, do not use `--break-system-packages`; install
-into Hermes' venv or use the one-command installer.
+into Hermes' venv or use the one-command installer. The installer also checks
+for Python, pip/venv support, `pipx`, and Node/npm/npx, and installs missing
+basics through common OS package managers when available.
 
 Then in a Hermes chat session:
 

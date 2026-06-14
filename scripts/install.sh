@@ -54,6 +54,161 @@ wrapper_target_from_file() {
   return 1
 }
 
+run_privileged() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    "$@"
+  elif have sudo; then
+    sudo "$@"
+  else
+    return 1
+  fi
+}
+
+install_python_packages() {
+  log "Installing Python prerequisites..."
+  if have apt-get; then
+    run_privileged apt-get update
+    run_privileged apt-get install -y python3 python3-venv python3-pip
+  elif have dnf; then
+    run_privileged dnf install -y python3 python3-pip
+  elif have yum; then
+    run_privileged yum install -y python3 python3-pip
+  elif have pacman; then
+    run_privileged pacman -Sy --needed --noconfirm python python-pip
+  elif have zypper; then
+    run_privileged zypper --non-interactive install python3 python3-pip
+  elif have apk; then
+    run_privileged apk add --no-cache python3 py3-pip
+  elif have brew; then
+    brew install python
+  else
+    return 1
+  fi
+}
+
+ensure_python_basics() {
+  if ! have python3; then
+    install_python_packages || return 1
+  fi
+  have python3 || return 1
+
+  if ! python3 -m venv --help >/dev/null 2>&1; then
+    install_python_packages || return 1
+  fi
+
+  if ! python3 -m pip --version >/dev/null 2>&1; then
+    python3 -m ensurepip --upgrade >/dev/null 2>&1 || install_python_packages || return 1
+  fi
+}
+
+install_pipx_package() {
+  log "Installing pipx..."
+  if have apt-get; then
+    run_privileged apt-get update
+    run_privileged apt-get install -y pipx
+  elif have dnf; then
+    run_privileged dnf install -y pipx
+  elif have yum; then
+    run_privileged yum install -y pipx
+  elif have pacman; then
+    run_privileged pacman -Sy --needed --noconfirm python-pipx
+  elif have zypper; then
+    run_privileged zypper --non-interactive install python3-pipx
+  elif have apk; then
+    run_privileged apk add --no-cache pipx || run_privileged apk add --no-cache py3-pipx
+  elif have brew; then
+    brew install pipx
+  else
+    return 1
+  fi
+}
+
+ensure_pipx() {
+  have pipx && return 0
+  ensure_python_basics || return 1
+  install_pipx_package || return 1
+  have pipx || return 1
+  pipx ensurepath >/dev/null 2>&1 || true
+}
+
+install_node_packages() {
+  log "Installing Node.js/npm prerequisites..."
+  if have apt-get; then
+    run_privileged apt-get update
+    run_privileged apt-get install -y nodejs npm
+  elif have dnf; then
+    run_privileged dnf install -y nodejs npm
+  elif have yum; then
+    run_privileged yum install -y nodejs npm
+  elif have pacman; then
+    run_privileged pacman -Sy --needed --noconfirm nodejs npm
+  elif have zypper; then
+    run_privileged zypper --non-interactive install nodejs npm
+  elif have apk; then
+    run_privileged apk add --no-cache nodejs npm
+  elif have brew; then
+    brew install node
+  else
+    return 1
+  fi
+}
+
+node_major() {
+  local v major
+  v="$(node --version 2>/dev/null || true)"
+  major="${v#v}"
+  major="${major%%.*}"
+  [[ "$major" =~ ^[0-9]+$ ]] || return 1
+  printf '%s\n' "$major"
+}
+
+ensure_node_tooling() {
+  local major
+  if have node && have npm && have npx; then
+    major="$(node_major || true)"
+    if [[ -n "$major" && "$major" -ge 18 ]]; then
+      return 0
+    fi
+    warn "Node.js is present but may be too old: $(node --version 2>/dev/null || printf unknown). ClawRouter needs Node 18+."
+  fi
+
+  install_node_packages || return 1
+
+  if have node && have npm && have npx; then
+    major="$(node_major || true)"
+    if [[ -z "$major" ]]; then
+      warn "Could not parse Node.js version: $(node --version 2>/dev/null || printf unknown). Install Node 18+ if setup fails."
+    elif [[ "$major" -lt 18 ]]; then
+      warn "Installed Node.js version is $(node --version 2>/dev/null || printf unknown); install Node 18+ if setup fails."
+    fi
+    return 0
+  fi
+  return 1
+}
+
+ensure_venv_pip() {
+  local py="$1"
+  if "$py" -m pip --version >/dev/null 2>&1; then
+    return 0
+  fi
+  "$py" -m ensurepip --upgrade >/dev/null 2>&1 || true
+  if "$py" -m pip --version >/dev/null 2>&1; then
+    return 0
+  fi
+  die "Hermes Python has no pip/ensurepip: $py. Install the python3-venv/python3-pip package, then rerun this installer."
+}
+
+repair_broken_hermes_launcher() {
+  local launcher target backup
+  launcher="$HOME/.local/bin/hermes"
+  if [[ -f "$launcher" ]] && target="$(wrapper_target_from_file "$launcher")" && [[ ! -x "$target" ]]; then
+    backup="$launcher.broken.$(date +%Y%m%d%H%M%S)"
+    mv "$launcher" "$backup"
+    warn "Moved broken Hermes launcher to $backup"
+    warn "It pointed to missing file: $target"
+  fi
+}
+
 find_hermes_python() {
   local candidate hermes_path resolved hermes_dir target first interp
 
@@ -150,9 +305,10 @@ enable_plugin() {
 install_into_venv() {
   local py="$1"
   log "Installing $PKG_SPEC into Hermes environment: $py"
-  "$py" -m ensurepip --upgrade >/dev/null 2>&1 || true
+  ensure_venv_pip "$py"
   "$py" -m pip install --upgrade pip wheel >/dev/null
   "$py" -m pip install --upgrade "$PKG_SPEC"
+  ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
   enable_plugin "$py"
   run_clawrouter_cli "$py" setup
   log "Running doctor (warnings are OK if the wallet is not funded yet)..."
@@ -160,16 +316,34 @@ install_into_venv() {
 }
 
 install_with_pipx() {
-  have pipx || return 1
+  local pipx_bin hermes_bin cli
+  ensure_pipx || return 1
   if ! pipx list --short 2>/dev/null | sed -n 's/[[:space:]].*$//p' | grep -qx 'hermes-agent'; then
-    return 1
+    log "Hermes is not installed under pipx; installing hermes-agent..."
+    pipx install hermes-agent
   fi
   log "Installing $PKG_SPEC into pipx Hermes app: hermes-agent"
   pipx inject --include-apps --force hermes-agent "$PKG_SPEC"
-  if have hermes; then
+  pipx ensurepath >/dev/null 2>&1 || true
+
+  pipx_bin="$(pipx environment --value PIPX_HOME 2>/dev/null || true)"
+  pipx_bin="${pipx_bin:-$HOME/.local/share/pipx}/venvs/hermes-agent/bin"
+  hermes_bin="$pipx_bin/hermes"
+  cli="$pipx_bin/hermes-clawrouter"
+
+  if [[ -x "$hermes_bin" ]]; then
+    "$hermes_bin" plugins enable "$PLUGIN_NAME" || warn "Could not run 'hermes plugins enable $PLUGIN_NAME'."
+  elif have hermes; then
     hermes plugins enable "$PLUGIN_NAME" || warn "Could not run 'hermes plugins enable $PLUGIN_NAME'."
   fi
-  if have hermes-clawrouter; then
+
+  ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
+
+  if [[ -x "$cli" ]]; then
+    "$cli" setup
+    log "Running doctor (warnings are OK if the wallet is not funded yet)..."
+    "$cli" doctor || true
+  elif have hermes-clawrouter; then
     hermes-clawrouter setup
     log "Running doctor (warnings are OK if the wallet is not funded yet)..."
     hermes-clawrouter doctor || true
@@ -181,6 +355,7 @@ install_with_pipx() {
 main() {
   log "== ClawRouter for Hermes installer =="
   log "This installer avoids system pip and PEP 668 by installing into Hermes' own environment."
+  log "It checks Python, pip/venv support, pipx, and Node/npm/npx before setup."
 
   local hermes_py
   if hermes_py="$(find_hermes_python)"; then
@@ -188,6 +363,8 @@ main() {
     log "Done. Restart Hermes, then choose blockrun/auto in /model."
     return 0
   fi
+
+  repair_broken_hermes_launcher
 
   if install_with_pipx; then
     log "Done. Restart Hermes, then choose blockrun/auto in /model."
@@ -202,9 +379,12 @@ main() {
 
 Could not find a working Hermes virtualenv to install into.
 
-Fix Hermes first, then rerun this installer. Recommended beginner-safe path:
+The installer tried to install missing basics through your OS package manager,
+but could not complete automatically.
 
-  sudo apt update && sudo apt install -y pipx
+Manual Debian/Ubuntu recovery path:
+
+  sudo apt update && sudo apt install -y python3 python3-venv python3-pip pipx nodejs npm
   pipx ensurepath
   pipx install hermes-agent
   curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash
