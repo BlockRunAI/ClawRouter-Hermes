@@ -281,6 +281,47 @@ run_clawrouter_cli() {
   fi
 }
 
+enable_plugin_in_config() {
+  local py="$1"
+  "$py" - "$PLUGIN_NAME" <<'PY'
+import os
+import sys
+from pathlib import Path
+
+import yaml
+
+plugin_name = sys.argv[1]
+home = Path(os.environ.get("HERMES_HOME") or (Path.home() / ".hermes")).expanduser()
+path = home / "config.yaml"
+path.parent.mkdir(parents=True, exist_ok=True)
+
+try:
+    raw = path.read_text(encoding="utf-8") if path.exists() else ""
+    cfg = yaml.safe_load(raw) if raw.strip() else {}
+except Exception:
+    cfg = {}
+
+if not isinstance(cfg, dict):
+    cfg = {}
+
+plugins = cfg.setdefault("plugins", {})
+if not isinstance(plugins, dict):
+    plugins = {}
+    cfg["plugins"] = plugins
+
+enabled = plugins.get("enabled")
+if not isinstance(enabled, list):
+    enabled = []
+
+if plugin_name not in enabled:
+    enabled.append(plugin_name)
+plugins["enabled"] = sorted(str(item) for item in enabled)
+
+path.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+print(f"Enabled Hermes plugin in config: {plugin_name} ({path})")
+PY
+}
+
 enable_plugin() {
   local py="$1"
   local bin_dir hermes_bin
@@ -290,7 +331,8 @@ enable_plugin() {
     if have hermes; then
       hermes_bin="$(command -v hermes)"
     else
-      warn "Hermes command not found; skipping 'hermes plugins enable $PLUGIN_NAME'."
+      warn "Hermes command not found; enabling plugin directly in config."
+      enable_plugin_in_config "$py"
       return 0
     fi
   fi
@@ -298,7 +340,8 @@ enable_plugin() {
   if "$hermes_bin" plugins enable "$PLUGIN_NAME"; then
     log "Enabled Hermes plugin: $PLUGIN_NAME"
   else
-    warn "Could not run 'hermes plugins enable $PLUGIN_NAME'. Continuing; setup still writes the provider config."
+    warn "Hermes CLI could not enable entry-point plugin '$PLUGIN_NAME'; enabling it directly in config."
+    enable_plugin_in_config "$py"
   fi
 }
 
@@ -331,11 +374,7 @@ install_with_pipx() {
   hermes_bin="$pipx_bin/hermes"
   cli="$pipx_bin/hermes-clawrouter"
 
-  if [[ -x "$hermes_bin" ]]; then
-    "$hermes_bin" plugins enable "$PLUGIN_NAME" || warn "Could not run 'hermes plugins enable $PLUGIN_NAME'."
-  elif have hermes; then
-    hermes plugins enable "$PLUGIN_NAME" || warn "Could not run 'hermes plugins enable $PLUGIN_NAME'."
-  fi
+  enable_plugin "$pipx_bin/python"
 
   ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
 
