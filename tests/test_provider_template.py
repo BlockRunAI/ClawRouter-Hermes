@@ -64,7 +64,7 @@ def test_curated_picker_catalog_contains_free_models():
     chat_models = models.chat_models()
     free_models = [model for model in chat_models if models.is_free_model(model)]
     assert "blockrun/free" in free_models
-    assert any(model.startswith("free/") for model in free_models)
+    assert any(model.startswith("blockrun/free/") for model in free_models)
 
 
 def test_materialize_writes_correct_filenames(tmp_path, monkeypatch):

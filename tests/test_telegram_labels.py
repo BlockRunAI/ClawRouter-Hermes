@@ -77,8 +77,8 @@ def test_patch_relabels_only_model_buttons(monkeypatch):
     _patch_telegram_model_labels()
     assert adapter_cls._clawrouter_labels_patched is True
 
-    # blockrun/free is free, openai/gpt-5.5 is not.
-    models = ["blockrun/free", "openai/gpt-5.5"]
+    # blockrun/free is free, blockrun/openai/gpt-5.5 is not.
+    models = ["blockrun/free", "blockrun/openai/gpt-5.5"]
     markup, page_info = adapter_cls._build_model_keyboard(adapter_cls(), models, 0)
 
     model_row, nav_row = markup.inline_keyboard
