@@ -67,6 +67,37 @@ def test_curated_picker_catalog_contains_free_models():
     assert any(model.startswith("blockrun/free/") for model in free_models)
 
 
+def test_curated_picker_catalog_orders_featured_models():
+    from clawrouter_hermes import models
+
+    chat_models = models.chat_models()
+    positions = {model: idx for idx, model in enumerate(chat_models)}
+    assert chat_models[:4] == [
+        "blockrun/auto",
+        "blockrun/free",
+        "blockrun/eco",
+        "blockrun/premium",
+    ]
+    featured_order = [
+        "blockrun/anthropic/claude-opus-4.8",
+        "blockrun/anthropic/claude-opus-4.7",
+        "blockrun/anthropic/claude-sonnet-4.6",
+        "blockrun/anthropic/claude-haiku-4.5",
+        "blockrun/openai/gpt-5.5",
+        "blockrun/google/gemini-3.1-pro",
+        "blockrun/xai/grok-4.3",
+        "blockrun/zai/glm-5.2",
+        "blockrun/minimax/minimax-m3",
+        "blockrun/free/gpt-oss-120b",
+    ]
+    assert [positions[model] for model in featured_order] == sorted(
+        positions[model] for model in featured_order
+    )
+    assert chat_models[-7:] == [
+        model for model in chat_models if model.startswith("blockrun/free/")
+    ]
+
+
 def test_materialize_writes_correct_filenames(tmp_path, monkeypatch):
     """Materializer drops files at $HERMES_HOME/plugins/model-providers/clawrouter/."""
     monkeypatch.setenv("HOME", str(tmp_path))
