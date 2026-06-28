@@ -78,24 +78,32 @@ def test_curated_picker_catalog_orders_featured_models():
         "blockrun/eco",
         "blockrun/premium",
     ]
+    # Relative order mirrors ClawRouter's top-models.json: sonnet before opus,
+    # deepseek/moonshot before xai, free block before the zai/glm block.
     featured_order = [
-        "blockrun/anthropic/claude-opus-4.8",
-        "blockrun/anthropic/claude-opus-4.7",
         "blockrun/anthropic/claude-sonnet-4.6",
-        "blockrun/anthropic/claude-haiku-4.5",
+        "blockrun/anthropic/claude-opus-4.8",
         "blockrun/openai/gpt-5.5",
         "blockrun/google/gemini-3.1-pro",
+        "blockrun/deepseek/deepseek-v4-pro",
+        "blockrun/moonshot/kimi-k2.7",
         "blockrun/xai/grok-4.3",
-        "blockrun/zai/glm-5.2",
         "blockrun/minimax/minimax-m3",
         "blockrun/free/gpt-oss-120b",
+        "blockrun/zai/glm-5.2",
     ]
     assert [positions[model] for model in featured_order] == sorted(
         positions[model] for model in featured_order
     )
-    assert chat_models[-7:] == [
-        model for model in chat_models if model.startswith("blockrun/free/")
+    # The zai/glm block is the tail of the catalog, matching ClawRouter.
+    assert chat_models[-4:] == [
+        "blockrun/zai/glm-5.2",
+        "blockrun/zai/glm-5.1",
+        "blockrun/zai/glm-5",
+        "blockrun/zai/glm-5-turbo",
     ]
+    # Retired model must not reappear in the picker (NVIDIA EOL 2026-06-14).
+    assert "blockrun/free/qwen3-coder-480b" not in chat_models
 
 
 def test_materialize_writes_correct_filenames(tmp_path, monkeypatch):
