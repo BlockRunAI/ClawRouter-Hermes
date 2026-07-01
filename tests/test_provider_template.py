@@ -81,6 +81,7 @@ def test_curated_picker_catalog_orders_featured_models():
     # Relative order mirrors ClawRouter's top-models.json: sonnet before opus,
     # deepseek/moonshot before xai, free block before the zai/glm block.
     featured_order = [
+        "blockrun/anthropic/claude-sonnet-5",
         "blockrun/anthropic/claude-sonnet-4.6",
         "blockrun/anthropic/claude-opus-4.8",
         "blockrun/openai/gpt-5.5",

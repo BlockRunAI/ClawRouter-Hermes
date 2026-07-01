@@ -14,6 +14,7 @@ CHAT_MODELS = (
     "blockrun/free",
     "blockrun/eco",
     "blockrun/premium",
+    "blockrun/anthropic/claude-sonnet-5",
     "blockrun/anthropic/claude-sonnet-4.6",
     "blockrun/anthropic/claude-opus-4.8",
     "blockrun/anthropic/claude-opus-4.7",
