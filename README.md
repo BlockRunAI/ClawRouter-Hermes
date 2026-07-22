@@ -26,8 +26,8 @@ lives:
 ```bash
 ~/.hermes/hermes-agent/venv/bin/python -m pip install -U hermes-plugin-clawrouter
 hermes plugins enable clawrouter
-hermes-clawrouter setup
-hermes-clawrouter doctor
+~/.hermes/hermes-agent/venv/bin/hermes-clawrouter setup
+~/.hermes/hermes-agent/venv/bin/hermes-clawrouter doctor
 ```
 
 If `pip install hermes-plugin-clawrouter` shows `externally-managed-environment`,
@@ -41,6 +41,11 @@ ClawRouter installer.
 `CLAWROUTER_API_KEY` is intentionally a non-secret placeholder. ClawRouter payments use the local wallet/proxy, but Hermes hides API-key-style providers from `/model` unless the configured key env var exists.
 
 `hermes-clawrouter` is provided because some Hermes releases do not add plugin-defined top-level CLI commands before the plugin is enabled. Once the plugin is loaded, `hermes clawrouter <setup|wallet|doctor|route|stats>` may also be available.
+
+If `hermes-clawrouter --version` shows an older version after updating, your shell
+may be finding an old `~/.local/bin/hermes-clawrouter` from a previous `pip --user`
+install. Re-run the one-command installer; it refreshes that launcher to delegate
+to Hermes' current venv.
 
 ## Usage
 

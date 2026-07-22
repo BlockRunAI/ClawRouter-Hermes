@@ -292,6 +292,82 @@ run_clawrouter_cli() {
   fi
 }
 
+# Refresh ~/.local/bin/hermes-clawrouter so a stale launcher from an old
+# `pip install --user` cannot shadow the freshly installed venv CLI. Launcher
+# refresh is best-effort: every failure warns and returns 0 so it can never
+# abort or fail an otherwise successful install.
+sync_user_cli_launcher() {
+  local py="$1"
+  local bin_dir cli esc_cli shim_exec user_bin launcher backup tmp
+  py="$(resolve_path "$py")"
+  bin_dir="$(dirname "$py")"
+  cli="$bin_dir/hermes-clawrouter"
+  [[ -x "$cli" ]] || return 0
+  case "$cli" in
+    /*) ;;
+    *)
+      warn "Refusing to write user launcher for non-absolute CLI path: $cli"
+      return 0
+      ;;
+  esac
+
+  user_bin="$HOME/.local/bin"
+  launcher="$user_bin/hermes-clawrouter"
+  if ! mkdir -p "$user_bin" 2>/dev/null; then
+    warn "Could not create $user_bin; skipping hermes-clawrouter launcher refresh."
+    return 0
+  fi
+
+  # Single-quote for POSIX sh, escaping embedded single quotes.
+  esc_cli="$(printf '%s' "$cli" | sed "s/'/'\\\\''/g")"
+  shim_exec="exec '$esc_cli' \"\$@\""
+
+  if [[ -L "$launcher" ]]; then
+    if [[ "$(resolve_path "$launcher")" == "$(resolve_path "$cli")" ]]; then
+      # Already points at the current CLI (e.g. pipx-managed). Leave it to
+      # its owner. Never write through a symlink: with a same-target link,
+      # `cat >` would overwrite the venv's real console script with a shim
+      # that execs itself forever.
+      return 0
+    fi
+    backup="$launcher.bak.$(date +%Y%m%d%H%M%S).$$"
+    if ! mv "$launcher" "$backup" 2>/dev/null; then
+      warn "Could not move old hermes-clawrouter launcher aside; skipping refresh."
+      return 0
+    fi
+    warn "Moved old hermes-clawrouter launcher to $backup"
+  elif [[ -e "$launcher" && ! -f "$launcher" ]]; then
+    warn "$launcher exists but is not a regular file; skipping launcher refresh."
+    return 0
+  elif [[ -f "$launcher" ]] && ! grep -Fq "$shim_exec" "$launcher" 2>/dev/null; then
+    backup="$launcher.bak.$(date +%Y%m%d%H%M%S).$$"
+    if ! mv "$launcher" "$backup" 2>/dev/null; then
+      warn "Could not move old hermes-clawrouter launcher aside; skipping refresh."
+      return 0
+    fi
+    warn "Moved old hermes-clawrouter launcher to $backup"
+  fi
+
+  # Write to a temp file and rename so the launcher is replaced atomically
+  # and no write ever goes through a pre-existing path.
+  if ! tmp="$(mktemp "$user_bin/.hermes-clawrouter.XXXXXX" 2>/dev/null)"; then
+    warn "Could not create temp file in $user_bin; skipping launcher refresh."
+    return 0
+  fi
+  if ! printf '#!/usr/bin/env sh\n%s\n' "$shim_exec" > "$tmp" 2>/dev/null; then
+    rm -f "$tmp"
+    warn "Could not write $launcher; skipping launcher refresh."
+    return 0
+  fi
+  chmod +x "$tmp" 2>/dev/null || true
+  if ! mv -f "$tmp" "$launcher" 2>/dev/null; then
+    rm -f "$tmp"
+    warn "Could not install $launcher; skipping launcher refresh."
+    return 0
+  fi
+  log "Updated user launcher: $launcher -> $cli"
+}
+
 enable_plugin_in_config() {
   local py="$1"
   "$py" - "$PLUGIN_NAME" <<'PY'
@@ -365,6 +441,7 @@ install_into_venv() {
     warn "pip failed to install $PKG_SPEC into $py."
     return 1
   fi
+  sync_user_cli_launcher "$py"
   ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
   enable_plugin "$py"
   if ! run_clawrouter_cli "$py" setup --force; then
@@ -391,6 +468,7 @@ install_with_pipx() {
   hermes_bin="$pipx_bin/hermes"
   cli="$pipx_bin/hermes-clawrouter"
 
+  sync_user_cli_launcher "$pipx_bin/python"
   enable_plugin "$pipx_bin/python"
 
   ensure_node_tooling || warn "Node/npm/npx not available; setup will still run, but ClawRouter proxy install may be deferred or fail."
