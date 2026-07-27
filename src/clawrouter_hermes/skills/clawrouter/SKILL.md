@@ -1,6 +1,6 @@
 ---
 name: clawrouter
-description: Hosted-gateway LLM router — save 67% on inference costs. A local proxy that forwards each request to the blockrun.ai gateway, which routes to the cheapest capable model across 55+ models from OpenAI, Anthropic, Google, DeepSeek, xAI, NVIDIA, and more. 8 free NVIDIA models included. Also exposes realtime market data (global stocks, crypto, FX, commodities), Twitter/X intelligence, and prediction-market data across Polymarket, Kalshi, Limitless, Opinion, Predict.Fun, dFlow + UMA oracle resolution + wallet identity & clustering as built-in agent tools. Not a local-inference tool — prompts are sent to the blockrun.ai gateway.
+description: Hosted-gateway LLM router — save 87% on inference costs. A local proxy that forwards each request to the blockrun.ai gateway, which routes to the cheapest capable model across <!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models from OpenAI, Anthropic, Google, DeepSeek, xAI, NVIDIA, and more. 8 free NVIDIA models included. Also exposes realtime market data (global stocks, crypto, FX, commodities), Twitter/X intelligence, and prediction-market data across Polymarket, Kalshi, Limitless, Opinion, Predict.Fun, dFlow + UMA oracle resolution + wallet identity & clustering as built-in agent tools. Not a local-inference tool — prompts are sent to the blockrun.ai gateway.
 triggers:
   - "clawrouter"
   - "claw router"
@@ -65,7 +65,7 @@ basics through common OS package managers when available.
 
 Then in a Hermes chat session:
 
-- Pick model `blockrun/auto` for smart routing across 55+ models.
+- Pick model `blockrun/auto` for smart routing across <!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models.
 - `/clawrouter wallet` — show address + USDC balance
 - `/clawrouter stats` — proxy usage
 - `/clawrouter status` — proxy health
@@ -76,7 +76,7 @@ Wallet lives at `~/.openclaw/blockrun/mnemonic` (shared with the upstream TS CLI
 
 ---
 
-Hosted-gateway LLM router that saves 67% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across 55+ models from 9 providers (8 free NVIDIA models). All billing flows through one USDC wallet; you do not hold provider API keys.
+Hosted-gateway LLM router that saves <!-- br:savings.autoVsBaselinePct -->87<!-- /br:savings.autoVsBaselinePct -->% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across <!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models from 9 providers (8 free NVIDIA models). All billing flows through one USDC wallet; you do not hold provider API keys.
 
 **This is not a local-inference tool.** ClawRouter is a thin local proxy. Your prompts are sent over HTTPS to the blockrun.ai gateway for model execution. If your workload requires inference that never leaves your machine, use a local runtime like Ollama — ClawRouter is not the right tool for that use case.
 
@@ -149,16 +149,22 @@ openclaw models set openai/gpt-4o
 
 ClawRouter classifies each request into one of four tiers:
 
-- **SIMPLE** (40% of traffic) — factual lookups, greetings, translations → Gemini Flash ($0.60/M, 99% savings)
-- **MEDIUM** (30%) — summaries, explanations, data extraction → DeepSeek Chat ($0.42/M, 99% savings)
-- **COMPLEX** (20%) — code generation, multi-step analysis → Claude Opus ($75/M, best quality)
-- **REASONING** (10%) — proofs, formal logic, multi-step math → o3 ($8/M, 89% savings)
+- **SIMPLE** — factual lookups, greetings, translations → gemini-2.5-flash ($0.30/$2.50)
+- **MEDIUM** — summaries, explanations, data extraction → kimi-k2.7 ($0.95/$4.00)
+- **COMPLEX** — code generation, multi-step analysis → gemini-3.1-pro ($2/$12)
+- **REASONING** — proofs, formal logic, multi-step math → grok-4-1-fast-reasoning ($0.20/$0.50)
+
+Prices are per 1M input/output tokens, on the default `auto` profile. Per-tier
+savings percentages are deliberately not quoted: the published figure is blended
+across a stated workload mix, and a per-tier number invites comparison against a
+baseline nobody wrote down. See
+[savings-mix.json](https://github.com/BlockRunAI/blockrun/blob/main/src/brand/savings-mix.json).
 
 Rules handle ~80% of requests in <1ms. Only ambiguous queries hit the LLM classifier (~$0.00003 per classification).
 
 ## Available Models
 
-55+ models including: claude-fable-5, claude-opus-5, claude-opus-4.8, claude-opus-4.7, claude-sonnet-5, claude-sonnet-4.6, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.4, gemini-3.1-pro, gemini-3.5-flash, grok-4.5, grok-4.3, grok-build-0.1, deepseek-v4-pro, deepseek-chat, glm-5.2, kimi-k3, minimax-m3, qwen3.7-max, and the curated free models (mistral-large-3-675b, qwen3-next-80b-a3b-instruct, seed-oss-36b, nemotron-3-nano-omni-30b-a3b-reasoning [vision], mistral-nemotron, step-3.7-flash, nemotron-nano-9b-v2, nemotron-nano-12b-v2-vl [vision]).
+<!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models including: claude-fable-5, claude-opus-5, claude-opus-4.8, claude-opus-4.7, claude-sonnet-5, claude-sonnet-4.6, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.4, gemini-3.1-pro, gemini-3.5-flash, grok-4.5, grok-4.3, grok-build-0.1, deepseek-v4-pro, deepseek-chat, glm-5.2, kimi-k3, minimax-m3, qwen3.7-max, and the curated free models (mistral-large-3-675b, qwen3-next-80b-a3b-instruct, seed-oss-36b, nemotron-3-nano-omni-30b-a3b-reasoning [vision], mistral-nemotron, step-3.7-flash, nemotron-nano-9b-v2, nemotron-nano-12b-v2-vl [vision]).
 
 ## Built-in Agent Tools
 

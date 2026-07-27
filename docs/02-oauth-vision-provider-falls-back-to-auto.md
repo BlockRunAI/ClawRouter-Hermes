@@ -122,7 +122,7 @@ avoiding the broken OAuth branch.
 
 *If you'd rather not assemble and maintain your own proxy,
 [ClawRouter](https://github.com/BlockRunAI/ClawRouter) is a ready-made Hermes plugin
-that exposes 55+ models (MiniMax included) as a single local `api_key` provider — one
+that exposes <!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models (MiniMax included) as a single local `api_key` provider — one
 way to implement the robust setup above. The diagnosis holds regardless of which proxy
 you use; track the upstream fix in
 [hermes-agent#38685](https://github.com/NousResearch/hermes-agent/issues/38685).*

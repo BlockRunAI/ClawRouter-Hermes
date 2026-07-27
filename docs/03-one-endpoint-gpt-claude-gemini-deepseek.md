@@ -1,6 +1,6 @@
 ---
 title: "Run GPT-5, Claude, Gemini and DeepSeek in Nous Hermes From One Endpoint"
-description: "Stop wiring a separate provider, key and OAuth flow for every model in Hermes Agent. Point Hermes at one OpenAI-compatible gateway and switch between 55+ models from the /model picker."
+description: "Stop wiring a separate provider, key and OAuth flow for every model in Hermes Agent. Point Hermes at one OpenAI-compatible gateway and switch between <!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models from the /model picker."
 keywords:
   - hermes multiple llm providers
   - hermes one endpoint all models
@@ -76,7 +76,7 @@ blockrun/xai/grok-4.5
 blockrun/minimax/minimax-m3
 blockrun/moonshot/kimi-k3
 blockrun/deepseek/deepseek-v4-pro
-…46 curated entries (55+ models via the gateway)
+…46 curated entries (<!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models via the gateway)
 ```
 
 Set the model to `blockrun/auto` and the gateway's router picks a model per request
@@ -167,4 +167,4 @@ Z.AI/GLM, NVIDIA-hosted open models, and more — plus a few free tiers.
 
 *Last reviewed against Hermes Agent v0.18.x. The single-endpoint pattern is provider-
 agnostic; ClawRouter is the implementation that adds non-custodial pay-per-call
-billing and 55+ models behind the one URL.*
+billing and <!-- br:models.chatVisible -->66<!-- /br:models.chatVisible --> models behind the one URL.*
