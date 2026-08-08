@@ -33,7 +33,7 @@ No provider accounts. No API keys. No credit card.<br><br>
 
 </div>
 
-> **hermes-plugin-clawrouter** wires [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) into [ClawRouter](https://github.com/BlockRunAI/ClawRouter), the open-source LLM router built for autonomous agents. One `pip install` gives Hermes <!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> chat models from OpenAI, Anthropic, Google, xAI, DeepSeek, Moonshot, Z.ai, MiniMax, Qwen, NVIDIA and more — plus image, video and web-search tools — behind a single local provider. Requests are scored across <!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions --> dimensions and routed to the cheapest capable model in under 1ms, cutting inference cost by <!-- br:savings.autoVsBaselinePct -->87<!-- /br:savings.autoVsBaselinePct -->% versus pinning Claude Opus 5. Authentication is a wallet signature, billing is USDC over [x402](https://x402.org) on Base or Solana, and <!-- br:models.free -->6<!-- /br:models.free --> models cost nothing at all. MIT licensed.
+> **hermes-plugin-clawrouter** wires [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) into [ClawRouter](https://github.com/BlockRunAI/ClawRouter), the open-source LLM router built for autonomous agents. One `pip install` gives Hermes <!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> chat models from OpenAI, Anthropic, Google, xAI, DeepSeek, Moonshot, Z.ai, MiniMax, Qwen, NVIDIA and more — plus image, video and web-search tools — behind a single local provider. Requests are scored across <!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions --> dimensions and routed to the cheapest capable model in under 1ms, cutting inference cost by <!-- br:savings.autoVsBaselinePct -->88<!-- /br:savings.autoVsBaselinePct -->% versus pinning Claude Opus 5. Authentication is a wallet signature, billing is USDC over [x402](https://x402.org) on Base or Solana, and <!-- br:models.free -->6<!-- /br:models.free --> models cost nothing at all. MIT licensed.
 
 ---
 
@@ -135,7 +135,7 @@ The `/model` picker carries a curated, provider-grouped slice of the catalog (sm
 | ------------------- | ----------------------- | ------------------------------------------------------------------------ | -------------------- |
 | `blockrun/free`     | Free models only        | **100% cheaper**                                                         | $0 balance, learning |
 | `blockrun/eco`      | Cheapest capable        | **<!-- br:savings.ecoVsBaselinePct -->98<!-- /br:savings.ecoVsBaselinePct -->% cheaper** | Maximum savings      |
-| `blockrun/auto`     | Balanced (recommended)  | **<!-- br:savings.autoVsBaselinePct -->87<!-- /br:savings.autoVsBaselinePct -->% cheaper** | General use          |
+| `blockrun/auto`     | Balanced (recommended)  | **<!-- br:savings.autoVsBaselinePct -->88<!-- /br:savings.autoVsBaselinePct -->% cheaper** | General use          |
 | `blockrun/premium`  | Best model per tier     | Baseline                                                                 | Mission-critical     |
 
 Savings are computed from a published workload mix, not estimated — see [savings-mix.json](https://github.com/BlockRunAI/blockrun/blob/main/src/brand/savings-mix.json). `/clawrouter route <eco|auto|premium>` sets the profile the proxy itself runs with, applied on its next spawn.
@@ -156,7 +156,7 @@ Savings are computed from a published workload mix, not estimated — see [savin
 | Tool                        | Coverage                                                                                  |
 | --------------------------- | ----------------------------------------------------------------------------------------- |
 | `clawrouter_image_generate` | <!-- br:models.image -->9<!-- /br:models.image --> image models — GPT Image 2, Nano Banana / Pro, Seedream 5 Pro, Grok Imagine, CogView-4 |
-| `clawrouter_video_generate` | <!-- br:models.video -->5<!-- /br:models.video --> video models — Seedance 1.5 / 2.0, Grok Imagine, Sora 2 |
+| `clawrouter_video_generate` | <!-- br:models.video -->6<!-- /br:models.video --> video models — Seedance 1.5 / 2.0, Grok Imagine, Sora 2 |
 | `clawrouter_web_search`     | Exa-powered web search                                                                    |
 
 All three bill from the same wallet — no extra keys, no extra setup.
@@ -372,7 +372,7 @@ You have no lab API keys. The only secret is a local BIP-39 mnemonic at `~/.open
 
 ### What does it cost to run?
 
-The plugin is MIT and free. You pay per request in USDC, at gateway prices — on `blockrun/auto` that's <!-- br:savings.autoVsBaselinePct -->87<!-- /br:savings.autoVsBaselinePct -->% less than pinning Claude Opus 5 for the same traffic, and <!-- br:savings.ecoVsBaselinePct -->98<!-- /br:savings.ecoVsBaselinePct -->% less on `eco`.
+The plugin is MIT and free. You pay per request in USDC, at gateway prices — on `blockrun/auto` that's <!-- br:savings.autoVsBaselinePct -->88<!-- /br:savings.autoVsBaselinePct -->% less than pinning Claude Opus 5 for the same traffic, and <!-- br:savings.ecoVsBaselinePct -->98<!-- /br:savings.ecoVsBaselinePct -->% less on `eco`.
 
 ### Can I point it at my own proxy?
 
