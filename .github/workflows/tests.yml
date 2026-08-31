@@ -1,0 +1,55 @@
+# The Python test suite. Until 2026-08-31 this repo had no test workflow at
+# all — the only CI was the brand-numbers marker check — so nothing but a
+# developer's local run ever exercised tests/.
+#
+# The sibling checkout is the point. test_curated_picker_catalog_mirrors_
+# clawrouter_top_models validates the curated catalog against ClawRouter's
+# top-models.json, and it pytest.skips when that file is absent. On a bare
+# runner it therefore skipped every time, and the catalog drifted unnoticed:
+# by the 2026-08-31 sync the guard was red on main and on the open PR
+# simultaneously, with green checks on both. Checking ClawRouter out beside
+# this repo is what makes the guard mean something in CI.
+#
+# CLAWROUTER_SIBLING_REQUIRED turns the skip into a failure, so a rename or a
+# broken checkout path fails loudly here instead of quietly reverting CI to
+# the state described above.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ClawRouter-Hermes
+
+      # tests/ resolves the sibling as <repo root>/../ClawRouter, so the two
+      # checkouts must sit side by side under the workspace root.
+      - uses: actions/checkout@v4
+        with:
+          repository: BlockRunAI/ClawRouter
+          path: ClawRouter
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        working-directory: ClawRouter-Hermes
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: pytest
+        working-directory: ClawRouter-Hermes
+        env:
+          CLAWROUTER_SIBLING_REQUIRED: "1"
+        run: python -m pytest -q -rs

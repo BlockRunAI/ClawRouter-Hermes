@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import importlib.resources as resources
 import json
+import os
 import sys
 import types
 from pathlib import Path
@@ -226,6 +227,14 @@ def test_curated_picker_catalog_mirrors_clawrouter_top_models():
         _repo_root().parent / "ClawRouter" / "src" / "top-models.json"
     )
     if not top_models_path.is_file():
+        # CI sets this after checking ClawRouter out beside this repo. Without
+        # it a broken checkout path would silently reduce CI to the state that
+        # let the catalog drift in the first place: a green skip.
+        if os.environ.get("CLAWROUTER_SIBLING_REQUIRED"):
+            raise AssertionError(
+                f"CLAWROUTER_SIBLING_REQUIRED is set but {top_models_path} is "
+                "missing — check the sibling checkout step"
+            )
         pytest.skip("sibling ClawRouter checkout not available")
     top_models = json.loads(top_models_path.read_text(encoding="utf-8"))
 
