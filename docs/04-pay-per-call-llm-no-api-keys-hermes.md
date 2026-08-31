@@ -1,6 +1,6 @@
 ---
 title: "Pay-Per-Call LLM Access for Hermes Agents — No API Keys, No Subscriptions"
-description: "Funding and rotating an API key for every model your Hermes agent uses is a chore and a liability. Here's how to give Hermes keyless, pay-per-call access to <!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> models with USDC micropayments from a wallet you control."
+description: "Funding and rotating an API key for every model your Hermes agent uses is a chore and a liability. Here's how to give Hermes keyless, pay-per-call access to <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models with USDC micropayments from a wallet you control."
 keywords:
   - hermes no api key llm
   - hermes pay per use llm
@@ -49,7 +49,7 @@ Applied to LLM access, that means:
 
 [ClawRouter](https://github.com/BlockRunAI/ClawRouter) implements this for Hermes. It
 runs a local OpenAI-compatible gateway that signs an x402 payment for each upstream
-call and routes to <!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> models:
+call and routes to <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/BlockRunAI/ClawRouter-Hermes/main/scripts/install.sh | bash

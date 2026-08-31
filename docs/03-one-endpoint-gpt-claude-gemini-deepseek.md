@@ -1,6 +1,6 @@
 ---
 title: "Run GPT-5, Claude, Gemini and DeepSeek in Nous Hermes From One Endpoint"
-description: "Stop wiring a separate provider, key and OAuth flow for every model in Hermes Agent. Point Hermes at one OpenAI-compatible gateway and switch between <!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> models from the /model picker."
+description: "Stop wiring a separate provider, key and OAuth flow for every model in Hermes Agent. Point Hermes at one OpenAI-compatible gateway and switch between <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models from the /model picker."
 keywords:
   - hermes multiple llm providers
   - hermes one endpoint all models
@@ -161,11 +161,11 @@ If you prefer a traditional key-based aggregator, the same one-endpoint config
 pattern works — you just lose the non-custodial/pay-per-use property.
 
 **How many models are available?**
-<!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> across OpenAI, Anthropic, Google, DeepSeek, Moonshot/Kimi, xAI/Grok, MiniMax,
+<!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> across OpenAI, Anthropic, Google, DeepSeek, Moonshot/Kimi, xAI/Grok, MiniMax,
 Z.AI/GLM, Qwen, NVIDIA-hosted open models, and more — plus a few free tiers.
 
 ---
 
 *Last reviewed against Hermes Agent v0.18.x. The single-endpoint pattern is provider-
 agnostic; ClawRouter is the implementation that adds non-custodial pay-per-call
-billing and <!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> models behind the one URL.*
+billing and <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models behind the one URL.*

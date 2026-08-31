@@ -145,7 +145,7 @@ dominates latency exactly as before.
 
 *If you'd rather not run and maintain your own local proxy, a ready-made option is
 [ClawRouter](https://github.com/BlockRunAI/ClawRouter) — a one-command Hermes plugin
-that serves a local OpenAI-compatible endpoint and gives you <!-- br:models.chatVisible -->71<!-- /br:models.chatVisible --> models — many
+that serves a local OpenAI-compatible endpoint and gives you <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models — many
 vision-capable — behind it. It's one way to implement Fix 2; the diagnosis above
 stands regardless of which proxy you use.*
 
