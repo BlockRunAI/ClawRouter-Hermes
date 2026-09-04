@@ -21,7 +21,7 @@ from importlib import metadata, resources
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
-from . import models, proxy_supervisor, state, tools, wallet
+from . import account, models, proxy_supervisor, state, tools, wallet
 
 #: Distribution name as declared in ``pyproject.toml``. Kept as a constant so
 #: tests can assert it still matches, since a typo would silently degrade
@@ -592,11 +592,15 @@ def _doctor(_: argparse.Namespace) -> None:
         except (OSError, subprocess.SubprocessError) as exc:
             rows.append(("Node >= 18", False, str(exc)))
 
-    rows.append(
+    account_info = account.resolve_api_key()
+    rows.append(("Account API or wallet configured", bool(account_info or wallet.MNEMONIC_FILE.is_file()), account_info["portal"] if account_info else str(wallet.MNEMONIC_FILE)))
+
+    if not account_info:
+        rows.append(
         ("Wallet mnemonic present",
          wallet.MNEMONIC_FILE.is_file(),
          str(wallet.MNEMONIC_FILE)),
-    )
+        )
 
     if wallet.MNEMONIC_FILE.is_file():
         mode = wallet.MNEMONIC_FILE.stat().st_mode & 0o777

@@ -5,7 +5,7 @@
 <h1>ClawRouter for Hermes</h1>
 
 <p>Hermes gives your agent a body. ClawRouter gives it a wallet.<br>
-No provider accounts. No API keys. No credit card.<br><br>
+Use a BlockRun account API key or x402 wallet payments.<br><br>
 <strong>One Hermes provider, <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models from 12 labs, paid per request in USDC.</strong><br><br>
 <em><!-- br:models.free -->7<!-- /br:models.free --> models free — no crypto, no balance, no signup required.</em></p>
 
@@ -26,6 +26,8 @@ No provider accounts. No API keys. No credit card.<br><br>
 
 [![Hermes](https://img.shields.io/badge/NousResearch-Hermes-000000?style=flat-square)](https://github.com/NousResearch/hermes-agent)
 [![x402 Protocol](https://img.shields.io/badge/x402-Micropayments-purple?style=flat-square)](https://x402.org)
+[![Solana-first](https://img.shields.io/badge/Solana-first-9945FF?style=flat-square&logo=solana&logoColor=white)](https://solana.com)
+
 [![Base Network](https://img.shields.io/badge/Base-USDC-0052FF?style=flat-square&logo=coinbase&logoColor=white)](https://base.org)
 [![Solana](https://img.shields.io/badge/Solana-USDC-9945FF?style=flat-square&logo=solana&logoColor=white)](https://solana.com)
 [![USDC Hackathon Winner](https://img.shields.io/badge/🏆_USDC_Hackathon-Agentic_Commerce_Winner-gold?style=flat-square)](https://x.com/USDC/status/2021625822294216977)
@@ -98,6 +100,12 @@ hermes plugins enable clawrouter
 ### 2. Pick a model
 
 In a Hermes chat, open `/model` and choose **ClawRouter → `blockrun/auto`** for smart routing — or pin anything from the catalog, e.g. `blockrun/anthropic/claude-opus-5`, `blockrun/openai/gpt-5.6-terra`, `blockrun/free/nemotron-3.5-lightning`.
+
+### Account API (no wallet)
+
+Register at [user.blockrun.ai](https://user.blockrun.ai), create an [API key](https://user.blockrun.ai/dashboard/keys), and add [credits](https://user.blockrun.ai/dashboard/credits). Export `BLOCKRUN_API_KEY` before starting Hermes. The supervisor already passes the environment to ClawRouter; the shared `~/.blockrun/.api-key` is also understood by ClawRouter.
+
+Account mode requires the ClawRouter release containing [PR #338](https://github.com/BlockRunAI/ClawRouter/pull/338). It supports routing, chat, media and data without creating a wallet. `/clawrouter wallet` remains for x402 users; account billing belongs to the credits portal. Wallet users should choose Solana first, then Base. Trading and wallet-signing features still require a wallet.
 
 ### 3. Fund the wallet (optional)
 
