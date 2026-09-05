@@ -227,3 +227,61 @@ def test_auth_mode_of_treats_a_pre_0_12_268_health_as_wallet(isolated_home):
     assert proxy_supervisor._auth_mode_of(None) == "wallet"
     assert proxy_supervisor._auth_mode_of({"status": "ok", "wallet": "0x"}) == "wallet"
     assert proxy_supervisor._auth_mode_of({"authMode": "api-key"}) == "api-key"
+
+
+def test_stop_kills_the_whole_process_group(isolated_home):
+    """``stop`` must reap the proxy npx spawned, not just the npx wrapper.
+
+    The proxy runs as ``npx -y @blockrun/clawrouter``, and npx execs the real
+    binary as a child. Terminating only the wrapper left a live proxy holding
+    the port — and, on the API-key rail, one that kept billing the account
+    after ``logout``. Observed on 2026-09-05: ``stop()`` returned, and
+    ``node .../clawrouter --port 8403`` was still serving ``/health`` with
+    ``authMode: api-key``.
+    """
+    import os
+    import signal
+    import subprocess
+    import time
+
+    from clawrouter_hermes import proxy_supervisor
+
+    # A parent that forks a child and waits — the shape npx gives us.
+    proc = subprocess.Popen(
+        ["sh", "-c", "sleep 30 & echo $! ; wait"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        start_new_session=True,
+    )
+    child_pid = int(proc.stdout.readline().strip())
+    pgid = os.getpgid(proc.pid)
+    os.kill(child_pid, 0)  # the grandchild is alive before we stop anything
+
+    proxy_supervisor._process = proc
+    try:
+        proxy_supervisor.stop()
+
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            try:
+                os.kill(child_pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        else:
+            raise AssertionError("child survived stop() — only the wrapper was signalled")
+
+        assert proc.poll() is not None, "wrapper still running after stop()"
+    finally:
+        proxy_supervisor._process = None
+        proxy_supervisor._stop_event.clear()
+        for pid in (child_pid, proc.pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass

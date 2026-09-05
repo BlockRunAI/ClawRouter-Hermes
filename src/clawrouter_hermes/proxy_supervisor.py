@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import threading
@@ -47,6 +48,8 @@ except PackageNotFoundError:  # source checkout without installed dist metadata
 _CLIENT_TAG = f"hermes-plugin/{_PLUGIN_VERSION}"
 
 _PROBE_TIMEOUT_S = 0.5
+#: How long a proxy gets to exit on SIGTERM before the group is SIGKILLed.
+_STOP_GRACE_S = 3.0
 _SPAWN_TIMEOUT_S = 30.0
 _HEARTBEAT_INTERVAL_S = 5.0
 _RESTART_WINDOW_S = 60.0
@@ -452,16 +455,47 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
     )
 
 
+def _terminate(proc: subprocess.Popen) -> None:
+    """Kill the proxy and everything it spawned.
+
+    The proxy is launched as ``npx -y @blockrun/clawrouter``, and npx execs the
+    real binary as a *child*. Signalling only ``proc`` therefore reaps the
+    wrapper and leaves a live proxy on the port — one that keeps serving, and
+    on the API-key rail keeps billing the account, after the user has logged
+    out. ``_spawn`` uses ``start_new_session=True``, so the wrapper is its own
+    process-group leader and the whole tree can be signalled at once.
+    """
+    try:
+        pgid = os.getpgid(proc.pid)
+    except OSError:
+        pgid = None
+
+    def signal_tree(sig: int) -> None:
+        if pgid is not None:
+            try:
+                os.killpg(pgid, sig)
+                return
+            except OSError:
+                pass
+        try:
+            proc.send_signal(sig)
+        except OSError:
+            pass
+
+    signal_tree(signal.SIGTERM)
+    try:
+        proc.wait(timeout=_STOP_GRACE_S)
+    except subprocess.TimeoutExpired:
+        signal_tree(signal.SIGKILL)
+
+
 def stop() -> None:
     """Tear down the supervisor — used on plugin reload / process exit."""
     global _process
     _stop_event.set()
     with _lock:
         if _process is not None and _process.poll() is None:
-            try:
-                _process.terminate()
-            except OSError:
-                pass
+            _terminate(_process)
         _process = None
 
 
