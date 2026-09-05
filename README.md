@@ -13,7 +13,7 @@ Use a BlockRun account API key or x402 wallet payments.<br><br>
 
 <img src="https://img.shields.io/badge/🆓_6_Free_Models-success?style=for-the-badge" alt="6 free models">&nbsp;
 <img src="https://img.shields.io/badge/🐍_Hermes_Plugin-black?style=for-the-badge" alt="Hermes plugin">&nbsp;
-<img src="https://img.shields.io/badge/🔑_Zero_API_Keys-blue?style=for-the-badge" alt="No API keys">&nbsp;
+<img src="https://img.shields.io/badge/🔑_API_Key_or_Wallet-blue?style=for-the-badge" alt="API key or wallet">&nbsp;
 <img src="https://img.shields.io/badge/⚡_Smart_Routing-yellow?style=for-the-badge" alt="Smart routing">&nbsp;
 <img src="https://img.shields.io/badge/💰_x402_USDC-purple?style=for-the-badge" alt="x402 USDC">&nbsp;
 <img src="https://img.shields.io/badge/🔓_MIT-green?style=for-the-badge" alt="MIT licensed">
@@ -28,14 +28,14 @@ Use a BlockRun account API key or x402 wallet payments.<br><br>
 [![x402 Protocol](https://img.shields.io/badge/x402-Micropayments-purple?style=flat-square)](https://x402.org)
 [![Solana-first](https://img.shields.io/badge/Solana-first-9945FF?style=flat-square&logo=solana&logoColor=white)](https://solana.com)
 
-[![Base Network](https://img.shields.io/badge/Base-USDC-0052FF?style=flat-square&logo=coinbase&logoColor=white)](https://base.org)
 [![Solana](https://img.shields.io/badge/Solana-USDC-9945FF?style=flat-square&logo=solana&logoColor=white)](https://solana.com)
+[![Base Network](https://img.shields.io/badge/Base-USDC-0052FF?style=flat-square&logo=coinbase&logoColor=white)](https://base.org)
 [![USDC Hackathon Winner](https://img.shields.io/badge/🏆_USDC_Hackathon-Agentic_Commerce_Winner-gold?style=flat-square)](https://x.com/USDC/status/2021625822294216977)
 [![Telegram](https://img.shields.io/badge/Telegram-Community-26A5E4?style=flat-square&logo=telegram)](https://t.me/blockrunAI)
 
 </div>
 
-> **hermes-plugin-clawrouter** wires [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) into [ClawRouter](https://github.com/BlockRunAI/ClawRouter), the open-source LLM router built for autonomous agents. One `pip install` gives Hermes <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> chat models from OpenAI, Anthropic, Google, xAI, DeepSeek, Moonshot, Z.ai, MiniMax, Qwen, NVIDIA and more — plus image, video and web-search tools — behind a single local provider. Requests are scored across <!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions --> dimensions and routed to the cheapest capable model in under 1ms, cutting inference cost by <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% versus pinning Claude Opus 5. Authentication is a wallet signature, billing is USDC over [x402](https://x402.org) on Base or Solana, and <!-- br:models.free -->7<!-- /br:models.free --> models cost nothing at all. MIT licensed.
+> **hermes-plugin-clawrouter** wires [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) into [ClawRouter](https://github.com/BlockRunAI/ClawRouter), the open-source LLM router built for autonomous agents. One `pip install` gives Hermes <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> chat models from OpenAI, Anthropic, Google, xAI, DeepSeek, Moonshot, Z.ai, MiniMax, Qwen, NVIDIA and more — plus image, video and web-search tools — behind a single local provider. Requests are scored across <!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions --> dimensions and routed to the cheapest capable model in under 1ms, cutting inference cost by <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% versus pinning Claude Opus 5. Authentication uses a BlockRun account API key with prepaid credits, or a wallet signature with USDC over [x402](https://x402.org) on Solana or Base, and <!-- br:models.free -->7<!-- /br:models.free --> models cost nothing at all. MIT licensed.
 
 ---
 
@@ -43,16 +43,16 @@ Use a BlockRun account API key or x402 wallet payments.<br><br>
 
 Stock Hermes wants a **provider block and an API key per lab**. Want Claude *and* GPT *and* Gemini *and* Grok? That's four accounts, four billing relationships, four keys to rotate, and a `config.yaml` that grows every time a new model ships.
 
-Your agent can't do any of that. Agents can't open accounts or type in credit cards — they can only sign transactions.
+Configure one BlockRun account API key for your agent, or let it pay directly with an x402 wallet.
 
 ClawRouter collapses the whole thing into one provider:
 
 - **Starts at $0** — <!-- br:models.free -->7<!-- /br:models.free --> free models, usable before you ever touch crypto
 - **One provider, every lab** — Hermes' `/model` picker shows the full curated catalog, grouped by provider
-- **No API keys** — the local wallet signature *is* authentication; you never hold a lab's key
+- **API key or wallet** — one BlockRun account key, or local wallet signatures; no separate provider keys
 - **No model babysitting** — `blockrun/auto` scores each request across <!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions --> dimensions and picks the cheapest model that can actually do the job
-- **Pay per request** — USDC via x402 on Base or Solana; $5 covers thousands of calls, non-custodial
-- **Same wallet for everything** — image, video and web-search tools bill through it too
+- **Pay per request** — prepaid account credits, or non-custodial USDC payments via x402 on Solana or Base
+- **Shared authentication** — image, video and web-search tools use the selected account or wallet mode
 - **Fixes Hermes' auxiliary-vision breakage** — a single `api_key` provider on `127.0.0.1` sidesteps [#38679](https://github.com/NousResearch/hermes-agent/issues/38679) and [#38685](https://github.com/NousResearch/hermes-agent/issues/38685) ([how](#auxiliary-vision))
 
 ---
