@@ -167,7 +167,14 @@ def test_curated_picker_catalog_orders_featured_models():
         # v0.12.239 dropped it from top-models.json); alias pins keep the id
         # routable at the gateway but it leaves user-facing surfaces.
         "blockrun/free/mistral-large-3-675b",
-        # Never a real SKU: keep the free route ID in the DeepSeek group instead.
+        # Never a real SKU. The gateway carries it as an ALIAS —
+        # `"deepseek/deepseek-v4-flash": "deepseek/deepseek-chat"` in blockrun's
+        # models.ts — so it quotes and answers (402 at $0.002, same as chat) while
+        # never appearing in /v1/models. Curating it would list one model twice.
+        # The old advice here, "keep the free route ID instead", is dead too:
+        # `free/deepseek-v4-flash` is now an Unknown model at the gateway (NVIDIA
+        # EOL 2026-08-12, retired from the picker in 0.3.20). Re-checked 2026-09-05
+        # against the live 100-model catalog while reviewing PR #35.
         "blockrun/deepseek/deepseek-v4-flash",
         # Dropped from the live BlockRun catalog by 2026-07-17:
         "blockrun/xai/grok-4-1-fast-reasoning",
