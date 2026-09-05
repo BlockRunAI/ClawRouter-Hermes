@@ -9,25 +9,62 @@ from __future__ import annotations
 import json
 from typing import Callable, Dict
 
-from . import proxy_supervisor, state, tools, wallet
+from . import api_key, proxy_supervisor, state, tools, wallet
 
 
 HELP_TEXT = (
     "ClawRouter commands:\n"
+    "  /clawrouter account           Show which rail you're paying on\n"
     "  /clawrouter wallet            Show address + USDC balance\n"
-    "  /clawrouter wallet base       Switch payment chain to Base\n"
     "  /clawrouter wallet solana     Switch payment chain to Solana\n"
+    "  /clawrouter wallet base       Switch payment chain to Base\n"
     "  /clawrouter stats             Show proxy usage stats\n"
     "  /clawrouter status            Show proxy health\n"
     "  /clawrouter route <eco|auto|premium>   Set routing profile\n"
-    "  /clawrouter help              This message"
+    "  /clawrouter logout            Drop the API key, go back to the wallet\n"
+    "  /clawrouter help              This message\n"
+    "\n"
+    "Paying by card instead of USDC? Mint a key at\n"
+    f"{api_key.PORTAL_KEYS_URL}, then run `hermes-clawrouter login <key>`\n"
+    "in a terminal — never paste a key into a chat."
 )
+
+
+def _handle_account(_: str) -> str:
+    """Which rail is this machine on, and where to change it."""
+    status = proxy_supervisor.status()
+    mode = status.auth_mode
+    if mode == "api-key":
+        body = api_key.format_summary(api_key.summary())
+        if status.reachable and status.gateway:
+            body += f"\n\n  Live proxy: {status.base_url} → {status.gateway}"
+        return body
+    return (
+        "👛 *Paying with the x402 wallet*\n\n"
+        "  USDC is signed per request from the local wallet — no account "
+        "anywhere.\n"
+        "  See it with `/clawrouter wallet`.\n\n"
+        f"  Prefer a card? Sign in at {api_key.PORTAL_URL}, mint a key at\n"
+        f"  {api_key.PORTAL_KEYS_URL}, then run "
+        "`hermes-clawrouter login <key>`.\n"
+        "  Nothing is deleted — `logout` puts you back here."
+    )
 
 
 def _handle_wallet(raw_args: str) -> str:
     args = (raw_args or "").strip().lower()
 
-    if args in {"base", "solana"}:
+    if not args and proxy_supervisor.status().auth_mode == "api-key":
+        # A wallet balance is not what "how am I paying" means here, and a
+        # $0.00 wallet reads as a broken setup when the account is what pays.
+        return (
+            api_key.format_summary(api_key.summary())
+            + "\n\n  The x402 wallet is idle while a key is configured. "
+            "`/clawrouter wallet solana`\n  or `base` still switches the chain "
+            "it would use after `hermes-clawrouter logout`."
+        )
+
+    if args in wallet.VALID_CHAINS:
         try:
             chain = wallet.set_payment_chain(args)
         except ValueError as exc:
@@ -69,7 +106,9 @@ def _handle_status(_: str) -> str:
         f"  Reachable:       {s.reachable}\n"
         f"  Managed by us:   {s.managed}  (pid={s.pid})\n"
         f"  Routing profile: {profile}\n"
-        f"  Error:           {s.error or '—'}"
+        f"  Auth mode:       {s.auth_mode}"
+        + (f" ({s.api_key_label} → {s.gateway})" if s.auth_mode == "api-key" and s.gateway else "")
+        + f"\n  Error:           {s.error or '—'}"
     )
 
 
@@ -91,7 +130,41 @@ def _handle_route(raw_args: str) -> str:
     )
 
 
+def _handle_login(_: str) -> str:
+    """Deliberately refuses. A slash command's arguments live in the chat
+    transcript — on Telegram that is a server-side message history the user
+    cannot fully delete, and an API key there is a bearer credential for their
+    money. The terminal is the only place this should be typed.
+    """
+    return (
+        "🔒 Not here — a key pasted into a chat stays in the transcript.\n\n"
+        "Run this in a terminal instead:\n"
+        "  `hermes-clawrouter login brk_live_…`\n\n"
+        f"Mint one at {api_key.PORTAL_KEYS_URL}. "
+        "If you already pasted a key\nin chat, revoke it there and mint a new one."
+    )
+
+
+def _handle_logout(_: str) -> str:
+    result = api_key.clear()
+    if not result["removed"] and not result["env_still_set"]:
+        return "No BlockRun API key was configured — already on the x402 wallet."
+    lines = ["✅ Back on the x402 wallet."]
+    for path in result["removed"]:
+        lines.append(f"  Removed {path}")
+    if result["env_still_set"]:
+        lines.append(
+            f"  ⚠ {api_key.ENV_API_KEY} is still set in the environment — only "
+            "your shell can unset that one."
+        )
+    lines.append("  Restart the proxy to take effect: `/clawrouter status`.")
+    return "\n".join(lines)
+
+
 _SUB_HANDLERS: Dict[str, Callable[[str], str]] = {
+    "account": _handle_account,
+    "login": _handle_login,
+    "logout": _handle_logout,
     "wallet": _handle_wallet,
     "stats": _handle_stats,
     "status": _handle_status,

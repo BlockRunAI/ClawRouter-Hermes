@@ -23,18 +23,29 @@ class _Resp:
         return self._body
 
 
-def _fake_status(reachable=True, base_url="http://127.0.0.1:8402/v1", error=None):
-    class _S:
-        pass
+def _fake_status(
+    reachable=True,
+    base_url="http://127.0.0.1:8402/v1",
+    error=None,
+    auth_mode="wallet",
+):
+    """Build a real ProxyStatus, not a duck-typed stand-in.
 
-    s = _S()
-    s.reachable = reachable
-    s.base_url = base_url
-    s.error = error
-    s.port = 8402
-    s.pid = None
-    s.managed = False
-    return s
+    An ad-hoc stub silently keeps passing when the dataclass grows a field the
+    production code then reads — which is exactly how the api-key branch first
+    blew up here with AttributeError instead of a red assertion.
+    """
+    from clawrouter_hermes.proxy_supervisor import ProxyStatus
+
+    return ProxyStatus(
+        reachable=reachable,
+        base_url=base_url,
+        port=8402,
+        pid=None,
+        managed=False,
+        error=error,
+        auth_mode=auth_mode,
+    )
 
 
 def test_missing_prompt_returns_error_json(isolated_home):
@@ -90,6 +101,32 @@ def test_402_surfaces_payment_hint(isolated_home):
         assert out["ok"] is False
         assert out["status"] == 402
         assert "fund" in out["hint"].lower()
+
+
+def test_402_in_api_key_mode_points_at_the_top_up_page(isolated_home):
+    """An exhausted account is not an empty wallet — sending an API-key
+    customer to "fund USDC on Solana" is a dead end."""
+    from clawrouter_hermes import tools
+
+    status = _fake_status(auth_mode="api-key")
+    with patch.object(tools.proxy_supervisor, "ensure_running", return_value=status), \
+         patch.object(tools.httpx, "post", return_value=_Resp(402, text="Payment required")):
+        out = json.loads(tools.image_generate({"prompt": "x"}))
+        assert out["status"] == 402
+        assert "credit" in out["error"].lower()
+        assert "user.blockrun.ai/dashboard/credits" in out["hint"]
+        assert "usdc" not in out["hint"].lower()
+
+
+def test_401_in_api_key_mode_explains_the_key(isolated_home):
+    from clawrouter_hermes import tools
+
+    status = _fake_status(auth_mode="api-key")
+    with patch.object(tools.proxy_supervisor, "ensure_running", return_value=status), \
+         patch.object(tools.httpx, "post", return_value=_Resp(401, text="Invalid API key")):
+        out = json.loads(tools.web_search({"query": "x"}))
+        assert out["status"] == 401
+        assert "user.blockrun.ai/dashboard/keys" in out["hint"]
 
 
 def test_proxy_unreachable_surfaces_error(isolated_home):

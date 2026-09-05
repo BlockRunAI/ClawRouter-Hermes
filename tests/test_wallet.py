@@ -100,11 +100,65 @@ def test_format_summary_surfaces_shared_wallet_and_backup(isolated_home):
     assert "all ClawRouter clients" in out
 
 
-def test_payment_chain_defaults_to_base(isolated_home):
+def test_payment_chain_defaults_to_solana_on_a_fresh_machine(isolated_home):
+    """Mirrors auth.ts::loadPaymentChain — nothing recorded and no wallet to
+    strand, so prefer Solana."""
     from clawrouter_hermes import wallet
 
-    # No file written yet → proxy's loadPaymentChain() also defaults to "base".
+    assert wallet.current_payment_chain() == "solana"
+
+
+def test_payment_chain_defaults_to_base_when_a_wallet_predates_the_preference(
+    isolated_home,
+):
+    """The line in auth.ts that must not move: an install predating the Solana
+    default has its USDC in the Base wallet and no Solana balance. Flipping it
+    would point every request at a gateway its money is not on."""
+    from clawrouter_hermes import wallet
+
+    wallet.WALLET_DIR.mkdir(parents=True, exist_ok=True)
+    (wallet.WALLET_DIR / "wallet.key").write_text("0x" + "0" * 64)
+
     assert wallet.current_payment_chain() == "base"
+
+
+def test_payment_chain_default_also_respects_the_core_session(isolated_home):
+    from clawrouter_hermes import wallet
+
+    core = wallet._core_dir()
+    core.mkdir(parents=True, exist_ok=True)
+    (core / ".session").write_text("0x" + "0" * 64)
+
+    assert wallet.current_payment_chain() == "base"
+
+
+def test_payment_chain_default_respects_the_env_wallet_key(isolated_home, monkeypatch):
+    from clawrouter_hermes import wallet
+
+    monkeypatch.setenv("BLOCKRUN_WALLET_KEY", "0x" + "0" * 64)
+    assert wallet.current_payment_chain() == "base"
+
+
+def test_payment_chain_env_var_wins(isolated_home, monkeypatch):
+    """resolvePaymentChain checks CLAWROUTER_PAYMENT_CHAIN before any file."""
+    from clawrouter_hermes import wallet
+
+    wallet.set_payment_chain("base")
+    monkeypatch.setenv("CLAWROUTER_PAYMENT_CHAIN", "solana")
+    assert wallet.current_payment_chain() == "solana"
+
+
+def test_core_chain_file_wins_over_legacy(isolated_home):
+    """Core is read first, so a stale Core file shadows the legacy one — which
+    is why set_payment_chain has to write both."""
+    from clawrouter_hermes import wallet
+
+    wallet.CHAIN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    wallet.CHAIN_FILE.write_text("base\n")
+    wallet._core_chain_file().parent.mkdir(parents=True, exist_ok=True)
+    wallet._core_chain_file().write_text("solana\n")
+
+    assert wallet.current_payment_chain() == "solana"
 
 
 def test_payment_chain_round_trip(isolated_home):
@@ -112,11 +166,16 @@ def test_payment_chain_round_trip(isolated_home):
 
     # Mixed case / surrounding space must normalize to the bare lowercase token
     # the proxy's loadPaymentChain() compares against (content.trim() == "solana").
+    # Byte-for-byte parity with auth.ts::savePaymentChain, trailing newline included.
     assert wallet.set_payment_chain("  Solana ") == "solana"
-    assert wallet.CHAIN_FILE.read_text(encoding="utf-8") == "solana"
+    assert wallet.CHAIN_FILE.read_text(encoding="utf-8") == "solana\n"
+    assert wallet._core_chain_file().read_text(encoding="utf-8") == "solana\n"
+    assert wallet.CHAIN_FILE.stat().st_mode & 0o777 == 0o600
     assert wallet.current_payment_chain() == "solana"
 
+    # Both files move together, or the next read picks up the stale Core one.
     assert wallet.set_payment_chain("base") == "base"
+    assert wallet._core_chain_file().read_text(encoding="utf-8") == "base\n"
     assert wallet.current_payment_chain() == "base"
 
 

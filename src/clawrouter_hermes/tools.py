@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 import httpx
 
-from . import proxy_supervisor, state
+from . import api_key, proxy_supervisor, state
 
 logger = logging.getLogger(__name__)
 
@@ -63,13 +63,31 @@ def _post(path: str, body: dict, *, timeout: float = _DEFAULT_TIMEOUT_S) -> str:
         return _err(f"HTTP error calling {url}: {exc}")
 
     if resp.status_code == 402:
+        # The two rails run out of money in different places, so the fix
+        # differs: a wallet needs USDC, an account needs a card top-up.
+        if status_obj.auth_mode == "api-key":
+            return _err(
+                "Payment required — your BlockRun account credit is exhausted.",
+                hint=f"Top up at {api_key.PORTAL_CREDITS_URL}, then retry.",
+                status=402,
+            )
         return _err(
             "Payment required — ClawRouter wallet may be empty.",
             hint=(
-                "Fund USDC on Base or Solana, then retry. "
+                "Fund USDC on Solana or Base, then retry. "
                 "Check balance: `hermes clawrouter wallet`."
             ),
             status=402,
+        )
+    if resp.status_code == 401 and status_obj.auth_mode == "api-key":
+        return _err(
+            "BlockRun rejected the API key.",
+            hint=(
+                f"It may be revoked or mistyped. Check {api_key.ENV_API_KEY}, or "
+                f"mint a new key at {api_key.PORTAL_KEYS_URL} and run "
+                "`hermes-clawrouter login <key>`."
+            ),
+            status=401,
         )
     if not resp.is_success:
         snippet = (resp.text or "")[:500]
@@ -136,10 +154,17 @@ def proxy_stats(**_: Any) -> dict:
             "base_url": status_obj.base_url,
             "port": state.get_port(),
         }
+    # /stats is served at the proxy ROOT, not under /v1 — a /v1/stats GET falls
+    # through to the chat fallback chain and comes back 502 ("All models in
+    # fallback chain failed"), which is what this command used to report.
     try:
-        resp = httpx.get(f"{status_obj.base_url}/stats", timeout=5.0)
+        resp = httpx.get(f"{state.proxy_root_url()}/stats", timeout=5.0)
         if resp.is_success:
-            return {"ok": True, "stats": resp.json()}
+            return {
+                "ok": True,
+                "auth_mode": status_obj.auth_mode,
+                "stats": resp.json(),
+            }
         return {"ok": False, "error": f"HTTP {resp.status_code}", "status": resp.status_code}
     except httpx.HTTPError as exc:
         return {"ok": False, "error": str(exc)}
