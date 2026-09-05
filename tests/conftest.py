@@ -21,13 +21,20 @@ def isolated_home(tmp_path, monkeypatch):
     monkeypatch.delenv("BLOCKRUN_WALLET_KEY", raising=False)
     monkeypatch.delenv("CLAWROUTER_PROXY_URL", raising=False)
     monkeypatch.delenv("HERMES_CLAWROUTER_AUTOSPAWN", raising=False)
+    # A real key in the developer's shell would otherwise flip every test onto
+    # the API-key rail — and `login`/`logout` tests would delete their key.
+    monkeypatch.delenv("BLOCKRUN_API_KEY", raising=False)
+    monkeypatch.delenv("BLOCKRUN_API_BASE_URL", raising=False)
 
     # Path.home() resolves $HOME, but some modules cache the value at import
     # time. Reload state/wallet so the new HOME wins.
     for mod_name in [
         "clawrouter_hermes.state",
         "clawrouter_hermes.wallet",
+        "clawrouter_hermes.api_key",
         "clawrouter_hermes.proxy_supervisor",
+        "clawrouter_hermes.tools",
+        "clawrouter_hermes.commands",
         "clawrouter_hermes.cli",
     ]:
         if mod_name in sys.modules:

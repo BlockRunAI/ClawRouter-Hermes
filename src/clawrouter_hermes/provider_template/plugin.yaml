@@ -4,5 +4,5 @@ kind: model-provider
 # installed package version, which is how a stale copy is detected after an
 # upgrade. Do not hand-maintain it here.
 version: 0.0.0
-description: "ClawRouter — smart LLM router with x402 USDC micropayments. Routes through the local proxy on http://127.0.0.1:8402."
+description: "ClawRouter — smart LLM router paid with x402 USDC (Solana or Base) or a BlockRun API key. Routes through the local proxy on http://127.0.0.1:8402."
 author: BlockRun

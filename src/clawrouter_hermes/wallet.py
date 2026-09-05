@@ -223,18 +223,19 @@ def wallet_summary() -> dict:
         else None
     )
 
+    # Solana first — the key order is what `--json` and every consumer renders.
     return {
         "ok": True,
         "source": addrs.source,
-        "evm": {
-            "address": addrs.evm,
-            "usdc_balance": base_balance,
-            "chain": "base",
-        },
         "solana": {
             "address": addrs.solana,
             "usdc_balance": sol_balance,
             "chain": "solana",
+        },
+        "evm": {
+            "address": addrs.evm,
+            "usdc_balance": base_balance,
+            "chain": "base",
         },
         "mnemonic_path": str(_mnemonic_file()),
     }
@@ -242,11 +243,17 @@ def wallet_summary() -> dict:
 
 CHAIN_FILE = _wallet_dir() / "payment-chain"
 
-VALID_CHAINS = {"base", "solana"}
+#: Solana leads everywhere it is listed — it is the rail BlockRun points people
+#: at first. Ordered, not a set, so every message that renders it agrees.
+#: The *default* is still Base: the file is shared machine-wide with the TS CLI
+#: (``resolvePaymentChain()``), and a Python-only default would make the two
+#: disagree about which chain an unconfigured machine actually pays on.
+CHAIN_ORDER = ("solana", "base")
+VALID_CHAINS = frozenset(CHAIN_ORDER)
 
 
 def current_payment_chain() -> str:
-    """Return the active payment chain ('base' or 'solana')."""
+    """Return the active payment chain ('solana' or 'base')."""
     try:
         return CHAIN_FILE.read_text(encoding="utf-8").strip().lower() or "base"
     except OSError:
@@ -261,7 +268,7 @@ def set_payment_chain(chain: str) -> str:
     chain = chain.strip().lower()
     if chain not in VALID_CHAINS:
         raise ValueError(
-            f"Unknown chain '{chain}'. Valid: {', '.join(sorted(VALID_CHAINS))}"
+            f"Unknown chain '{chain}'. Valid: {', '.join(CHAIN_ORDER)}"
         )
     CHAIN_FILE.parent.mkdir(parents=True, exist_ok=True)
     CHAIN_FILE.write_text(chain, encoding="utf-8")
@@ -284,16 +291,16 @@ def format_summary(summary: dict) -> str:
 
     return (
         "💰 *ClawRouter Wallet*\n\n"
-        f"*Base*\n"
-        f"  `{evm['address']}`\n"
-        f"  {_fmt(evm['usdc_balance'])}\n"
-        f"  [View on BaseScan](https://basescan.org/address/{evm['address']})\n\n"
         f"*Solana*\n"
         f"  `{sol['address']}`\n"
         f"  {_fmt(sol['usdc_balance'])}\n"
         f"  [View on Solscan](https://solscan.io/account/{sol['address']})\n\n"
+        f"*Base*\n"
+        f"  `{evm['address']}`\n"
+        f"  {_fmt(evm['usdc_balance'])}\n"
+        f"  [View on BaseScan](https://basescan.org/address/{evm['address']})\n\n"
         f"Paying on *{active.capitalize()}* · switch with "
-        f"`/clawrouter wallet base|solana` (affects all ClawRouter clients).\n"
+        f"`/clawrouter wallet solana|base` (affects all ClawRouter clients).\n"
         f"_Shared with OpenClaw if installed. Back up your mnemonic — it "
         f"controls your funds: {summary['mnemonic_path']}_"
     )

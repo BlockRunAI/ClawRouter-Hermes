@@ -21,7 +21,7 @@ from importlib import metadata, resources
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
-from . import models, proxy_supervisor, state, tools, wallet
+from . import api_key, models, proxy_supervisor, state, tools, wallet
 
 #: Distribution name as declared in ``pyproject.toml``. Kept as a constant so
 #: tests can assert it still matches, since a typo would silently degrade
@@ -114,6 +114,34 @@ def register_cli(subparser: argparse.ArgumentParser) -> None:
     wallet_p.add_argument("--json", action="store_true", help="Emit JSON instead of text")
     wallet_p.set_defaults(func=_wallet)
 
+    login_p = subs.add_parser(
+        "login",
+        help="Pay with BlockRun account credit instead of the wallet",
+        description=(
+            "Store a BlockRun API key (brk_…) so ClawRouter bills account "
+            "credit through api.blockrun.ai instead of signing x402 USDC "
+            "payments. Mint one at " + api_key.PORTAL_KEYS_URL + ". The wallet "
+            "is left untouched — `logout` reverses this."
+        ),
+    )
+    login_p.add_argument("key", help="Your BlockRun API key, e.g. brk_live_…")
+    login_p.add_argument(
+        "--no-verify", action="store_true",
+        help="Skip the api.blockrun.ai round trip that proves the key works.",
+    )
+    login_p.set_defaults(func=_login)
+
+    logout_p = subs.add_parser(
+        "logout", help="Remove the stored API key and go back to the x402 wallet",
+    )
+    logout_p.set_defaults(func=_logout)
+
+    account_p = subs.add_parser(
+        "account", help="Show which rail you're paying on (API key or wallet)",
+    )
+    account_p.add_argument("--json", action="store_true", help="Emit JSON instead of text")
+    account_p.set_defaults(func=_account)
+
     doctor_p = subs.add_parser("doctor", help="Health check")
     doctor_p.set_defaults(func=_doctor)
 
@@ -146,9 +174,104 @@ def clawrouter_command(args: argparse.Namespace) -> None:
 
 def _default_help(_: argparse.Namespace) -> None:
     print(
-        "Usage: hermes-clawrouter <setup|update|wallet|doctor|route|stats>\n\n"
+        "Usage: hermes-clawrouter "
+        "<setup|update|login|logout|account|wallet|doctor|route|stats>\n\n"
         "Run `hermes-clawrouter <sub> --help` for details.",
     )
+
+
+def _login(args: argparse.Namespace) -> None:
+    """Switch this machine onto the API-key rail."""
+    key = str(getattr(args, "key", "") or "").strip()
+    if not api_key.is_valid(key):
+        print('✗ That does not look like a BlockRun API key (expected "brk_…").')
+        print(f"  Mint one at {api_key.PORTAL_KEYS_URL}")
+        sys.exit(1)
+
+    if not getattr(args, "no_verify", False):
+        accepted, detail = api_key.verify(key)
+        if accepted is False:
+            print(f"✗ {detail}")
+            sys.exit(1)
+        if accepted is None:
+            # Unreachable is not rejected. Saving anyway beats refusing to
+            # configure a working key because the network blipped.
+            print(f"⚠ Could not verify the key: {detail}")
+            print("  Saving it anyway — run `hermes-clawrouter doctor` once you're online.")
+        else:
+            print(f"✓ {detail}")
+
+    path = api_key.save(key)
+    print(f"✓ Saved {api_key.mask(key)} to {path} (mode 0600)")
+    print("  ClawRouter now bills BlockRun account credit, not the x402 wallet.")
+    print(f"  Top up: {api_key.PORTAL_CREDITS_URL}")
+    print(f"  Usage:  {api_key.PORTAL_ACTIVITY_URL}")
+
+    # The two rails bill different accounts, so a proxy already running on the
+    # wallet must not keep serving this session.
+    _restart_proxy_for_auth_change()
+
+    print()
+    print("Your wallet is untouched — `hermes-clawrouter logout` puts you back on it.")
+
+
+def _logout(_: argparse.Namespace) -> None:
+    result = api_key.clear()
+    if not result["removed"] and not result["env_still_set"]:
+        print("No BlockRun API key was configured — already on the x402 wallet.")
+        return
+    for path in result["removed"]:
+        print(f"✓ Removed {path}")
+    if result["env_still_set"]:
+        print(
+            f"⚠ {api_key.ENV_API_KEY} is still set in this environment — only your "
+            "shell can unset that one."
+        )
+        print("  Until you do, ClawRouter keeps billing account credit.")
+    else:
+        print("✓ Back on the x402 wallet.")
+    _restart_proxy_for_auth_change()
+
+
+def _restart_proxy_for_auth_change() -> None:
+    """Stop any proxy we supervise so the next call starts on the new rail.
+
+    A running proxy holds its credential for its whole lifetime, so without
+    this the switch silently does not take effect until something else
+    restarts it — and the user watches the wrong account drain."""
+    proxy_supervisor.stop()
+    status = proxy_supervisor.status()
+    if status.reachable:
+        print(
+            f"⚠ A ClawRouter proxy is still running on {status.base_url} in "
+            f"{status.auth_mode} mode and was not started by this command."
+        )
+        print("  Stop it so the new credential takes effect.")
+
+
+def _account(args: argparse.Namespace) -> None:
+    summary = api_key.summary()
+    status = proxy_supervisor.status()
+    if getattr(args, "json", False):
+        print(json.dumps({
+            "auth_mode": status.auth_mode,
+            "proxy": {
+                "reachable": status.reachable,
+                "base_url": status.base_url,
+                "gateway": status.gateway,
+                "api_key_label": status.api_key_label,
+            },
+            "api_key": summary,
+        }, indent=2))
+        return
+    if summary.get("configured"):
+        print(api_key.format_summary(summary))
+    else:
+        print("👛 Paying with the x402 wallet — USDC signed per request, no account.")
+        print(f"   Prefer a card? Sign in at {api_key.PORTAL_URL}, mint a key at")
+        print(f"   {api_key.PORTAL_KEYS_URL}, then `hermes-clawrouter login <key>`.")
+    print()
+    print(f"Proxy: {status.base_url} · reachable={status.reachable} · mode={status.auth_mode}")
 
 
 def _setup(args: argparse.Namespace) -> None:
@@ -170,7 +293,7 @@ def _setup(args: argparse.Namespace) -> None:
         print(f"✓ Wrote model-provider plugin to {_provider_plugin_dir()}")
 
     _ensure_local_api_key()
-    print(f"✓ Ensured CLAWROUTER_API_KEY in {_env_file()}")
+    print(f"✓ Ensured CLAWROUTER_API_KEY in {_env_file()} (Hermes picker shim, not a credential)")
 
     config_changed = _configure_hermes_provider(
         set_default_force=bool(getattr(args, "set_default", False)),
@@ -187,15 +310,57 @@ def _setup(args: argparse.Namespace) -> None:
         print("✓ Node / npx detected.")
         _install_clawrouter_proxy()
 
+    _print_credential_section()
+
+    print()
+    print("Next: restart any running Hermes gateway, then choose ClawRouter in /model or run:")
+    print("  hermes --provider clawrouter -m blockrun/auto")
+
+
+def _print_credential_section() -> None:
+    """Report the rail this machine will actually pay on.
+
+    Two rails, and describing the wrong one is worse than saying nothing: an
+    API-key customer told to "back up your mnemonic" goes looking for a wallet
+    that is not paying for anything, and a wallet user told about account
+    credit goes looking for an account they never opened.
+    """
+    resolved = api_key.resolve()
+    if resolved is not None:
+        source_label = {
+            "env": f"{api_key.ENV_API_KEY} env var",
+            "core": str(api_key.CORE_API_KEY_FILE),
+            "legacy": str(api_key.LEGACY_API_KEY_FILE),
+        }.get(resolved.source, resolved.source)
+        print(f"✓ BlockRun API key {resolved.masked} (from {source_label})")
+        print(f"  Billing: account credit via {api_key.default_gateway()}")
+        print(f"  Top up:  {api_key.PORTAL_CREDITS_URL}")
+        print(f"  Usage:   {api_key.PORTAL_ACTIVITY_URL}")
+        installed = proxy_supervisor.local_proxy_version()
+        minimum = proxy_supervisor.MIN_API_KEY_PROXY_VERSION
+        if installed is not None and installed < minimum:
+            # This is the money case: those versions ignore the key and sign
+            # x402 payments from the wallet instead, without saying so.
+            print(
+                f"✗ The pre-installed proxy is {'.'.join(map(str, installed))} — "
+                f"API-key mode needs >= {'.'.join(map(str, minimum))}."
+            )
+            print("  Older proxies IGNORE the key and spend the wallet instead.")
+            print("  Re-run setup (it installs @latest) or: "
+                  "npm install -g @blockrun/clawrouter@latest")
+        print("  Your x402 wallet is untouched and idle — "
+              "`hermes-clawrouter logout` returns to it.")
+        return
+
     wallet_dir = wallet.MNEMONIC_FILE.parent
     if wallet.MNEMONIC_FILE.is_file():
         try:
             addrs = wallet.load_addresses()
-            print(f"✓ Wallet detected — EVM {addrs.evm}")
-            print(f"               Solana {addrs.solana}")
+            print(f"✓ Wallet detected — Solana {addrs.solana}")
+            print(f"                  EVM/Base {addrs.evm}")
             print(f"  Stored at {wallet_dir} (shared with OpenClaw if you use it).")
             print("  Your mnemonic controls your funds — back it up.")
-            print("  Fund USDC on Base or Solana (≥$5 covers thousands of requests).")
+            print("  Fund USDC on Solana or Base (≥$5 covers thousands of requests).")
         except Exception as exc:
             print(f"✗ Wallet file present but unreadable: {exc}")
     else:
@@ -204,10 +369,8 @@ def _setup(args: argparse.Namespace) -> None:
         print("  This wallet is shared with OpenClaw if you also use it. Once")
         print("  created, your mnemonic controls your funds — back it up.")
         print("  To create or import one now: npx @blockrun/clawrouter setup")
-
-    print()
-    print("Next: restart any running Hermes gateway, then choose ClawRouter in /model or run:")
-    print("  hermes --provider clawrouter -m blockrun/auto")
+    print(f"  Prefer to pay by card? Mint a key at {api_key.PORTAL_KEYS_URL},")
+    print("  then run: hermes-clawrouter login brk_live_…")
 
 
 def _update(_: argparse.Namespace) -> None:
@@ -330,6 +493,13 @@ def _ensure_local_api_key() -> None:
     ClawRouter itself does not use this for payment or wallet auth. Hermes hides
     API-key-style providers from its model picker unless their key env var is
     present, so this non-secret placeholder is only a discovery shim.
+
+    Not to be confused with ``BLOCKRUN_API_KEY`` (see :mod:`.api_key`), which is
+    a real bearer credential for the user's account. The names sit one word
+    apart, so: ``CLAWROUTER_API_KEY`` is a fixed string Hermes needs to see;
+    ``BLOCKRUN_API_KEY`` is money. Putting a ``brk_…`` key in this variable does
+    nothing — the local proxy replaces the client's authorization header
+    upstream regardless of what the client sent.
     """
     os.environ.setdefault("CLAWROUTER_API_KEY", "clawrouter-local")
     path = _env_file()
@@ -514,9 +684,15 @@ def patch_hermes_model_catalog() -> None:
 def _wallet(args: argparse.Namespace) -> None:
     summary = wallet.wallet_summary()
     if args.json:
+        summary["auth_mode"] = proxy_supervisor.desired_auth_mode()
         print(json.dumps(summary, indent=2))
         return
     print(wallet.format_summary(summary))
+    if api_key.resolve() is not None:
+        print()
+        print("ℹ A BlockRun API key is configured, so this wallet is idle — "
+              "calls bill account credit.")
+        print("  `hermes-clawrouter account` shows that rail; `logout` returns here.")
 
 
 def _check_provider_config() -> Tuple[bool, str]:
@@ -592,15 +768,51 @@ def _doctor(_: argparse.Namespace) -> None:
         except (OSError, subprocess.SubprocessError) as exc:
             rows.append(("Node >= 18", False, str(exc)))
 
-    rows.append(
-        ("Wallet mnemonic present",
-         wallet.MNEMONIC_FILE.is_file(),
-         str(wallet.MNEMONIC_FILE)),
-    )
+    # Which credential checks matter depends on the rail. Asserting "wallet
+    # mnemonic present" against an API-key customer fails doctor with exit 1
+    # over a file they correctly do not have.
+    resolved = api_key.resolve()
+    api_key_mode = resolved is not None
 
-    if wallet.MNEMONIC_FILE.is_file():
-        mode = wallet.MNEMONIC_FILE.stat().st_mode & 0o777
-        rows.append(("Mnemonic mode 0o600", mode == 0o600, f"0o{mode:o}"))
+    if api_key_mode:
+        rows.append(("Auth rail", True, "BlockRun API key (account credit)"))
+        source_label = {
+            "env": f"{api_key.ENV_API_KEY} env var",
+            "core": str(api_key.CORE_API_KEY_FILE),
+            "legacy": str(api_key.LEGACY_API_KEY_FILE),
+        }.get(resolved.source, resolved.source)
+        rows.append(("BlockRun API key configured", True,
+                     f"{resolved.masked} (from {source_label})"))
+
+        accepted, detail = api_key.verify(resolved.key)
+        # An unreachable gateway is not a rejected key — don't send someone to
+        # mint a replacement for a credential that is fine.
+        rows.append(("Gateway accepts the key", accepted is not False, detail))
+
+        if resolved.source == "core":
+            mode = api_key.CORE_API_KEY_FILE.stat().st_mode & 0o777
+            rows.append(("API key file mode 0o600", mode == 0o600, f"0o{mode:o}"))
+
+        installed = proxy_supervisor.local_proxy_version()
+        minimum = proxy_supervisor.MIN_API_KEY_PROXY_VERSION
+        rows.append((
+            f"Proxy >= {'.'.join(map(str, minimum))} (API-key support)",
+            installed is None or installed >= minimum,
+            (".".join(map(str, installed)) + " pre-installed"
+             if installed
+             else "none pre-installed — npx resolves @latest"),
+        ))
+    else:
+        rows.append(("Auth rail", True, "x402 wallet (USDC on Solana or Base)"))
+        rows.append(
+            ("Wallet mnemonic present",
+             wallet.MNEMONIC_FILE.is_file(),
+             str(wallet.MNEMONIC_FILE)),
+        )
+
+        if wallet.MNEMONIC_FILE.is_file():
+            mode = wallet.MNEMONIC_FILE.stat().st_mode & 0o777
+            rows.append(("Mnemonic mode 0o600", mode == 0o600, f"0o{mode:o}"))
 
     rows.append(
         ("Model-provider plugin installed",
@@ -621,7 +833,19 @@ def _doctor(_: argparse.Namespace) -> None:
          proxy_status.base_url),
     )
 
-    if wallet.MNEMONIC_FILE.is_file():
+    if proxy_status.reachable:
+        # The running proxy's own /health is the only thing that proves which
+        # account is actually being billed — everything above only describes
+        # what we configured.
+        want = "api-key" if api_key_mode else "wallet"
+        rows.append((
+            "Running proxy is on the configured rail",
+            proxy_status.auth_mode == want,
+            f"proxy={proxy_status.auth_mode} configured={want}"
+            + (f" → {proxy_status.gateway}" if proxy_status.gateway else ""),
+        ))
+
+    if not api_key_mode and wallet.MNEMONIC_FILE.is_file():
         summary = wallet.wallet_summary()
         if summary.get("ok"):
             base_bal = summary["evm"].get("usdc_balance")
@@ -630,9 +854,9 @@ def _doctor(_: argparse.Namespace) -> None:
                 isinstance(b, (int, float)) and b > 0 for b in (base_bal, sol_bal)
             )
             rows.append(
-                ("USDC balance > 0 on Base or Solana",
+                ("USDC balance > 0 on Solana or Base",
                  has_funds,
-                 f"base={base_bal} solana={sol_bal}"),
+                 f"solana={sol_bal} base={base_bal}"),
             )
 
     name_w = max(len(r[0]) for r in rows) + 2

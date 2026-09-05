@@ -18,6 +18,7 @@ Design notes:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -27,11 +28,12 @@ import threading
 import time
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
+from pathlib import Path
 from typing import Optional
 
 import httpx
 
-from . import state
+from . import api_key, state
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,14 @@ _RESTART_WINDOW_S = 60.0
 _MAX_RESTARTS_PER_WINDOW = 3
 _PORT_SCAN_RANGE = range(8402, 8411)
 
+#: First @blockrun/clawrouter that understands ``BLOCKRUN_API_KEY``. Older
+#: proxies ignore the key *silently* and sign x402 payments from the wallet
+#: instead — a configured key would spend USDC the user thought was parked.
+#: That is a money bug, not a feature gap, so we refuse to launch a stale
+#: pre-installed binary while a key is configured and take the (slower) npx
+#: path to a current one instead.
+MIN_API_KEY_PROXY_VERSION = (0, 12, 268)
+
 _lock = threading.Lock()
 _process: Optional[subprocess.Popen] = None
 _heartbeat: Optional[threading.Thread] = None
@@ -67,6 +77,52 @@ class ProxyStatus:
     pid: Optional[int]
     managed: bool  # we spawned it vs. an external instance reused
     error: Optional[str] = None
+    #: "api-key" | "wallet" — how the *running* proxy is paying. Read from its
+    #: own /health so the plugin never describes a rail the proxy isn't on.
+    auth_mode: str = "wallet"
+    api_key_label: Optional[str] = None
+    gateway: Optional[str] = None
+
+
+def desired_auth_mode() -> str:
+    """The rail this machine is configured for, before any proxy is running.
+
+    A key wins over a wallet whenever both are present — the same precedence
+    the proxy itself applies, so ``doctor`` and ``setup`` can describe the
+    right rail before anything has been spawned.
+    """
+    return "api-key" if api_key.resolve() is not None else "wallet"
+
+
+def _health(root_url: str, timeout: float = _PROBE_TIMEOUT_S) -> Optional[dict]:
+    """Read the proxy's own ``/health``.
+
+    Lives at the root, not under ``/v1``. Returns ``None`` when the proxy is
+    unreachable or answers with something that isn't JSON.
+    """
+    try:
+        resp = httpx.get(f"{root_url}/health", timeout=timeout)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _auth_mode_of(health: Optional[dict]) -> str:
+    """Auth mode a ``/health`` payload describes.
+
+    ClawRouter only started reporting ``authMode`` in 0.12.268; before that
+    the only rail was the wallet, so an absent field means wallet.
+    """
+    if not health:
+        return "wallet"
+    return "api-key" if health.get("authMode") == "api-key" else "wallet"
+
+
+def _root_of(base_url: str) -> str:
+    return base_url[:-3] if base_url.endswith("/v1") else base_url
 
 
 def _probe(base_url: str, timeout: float = _PROBE_TIMEOUT_S) -> bool:
@@ -87,16 +143,33 @@ def _port_free(port: int) -> bool:
     return True
 
 
-def _claim_port() -> int:
+def _claim_port(want_mode: Optional[str] = None) -> int:
+    """Find a port to use: an existing proxy we may reuse, or a free one.
+
+    *want_mode* guards the reuse half. Two ClawRouters bill different accounts
+    from different hosts, so attaching to one running on the other rail would
+    spend money the caller did not mean to spend — a wallet proxy left over on
+    :8402 must not silently serve a user who has since configured an API key.
+    The proxy itself refuses that reuse; we have to refuse it too, because we
+    reuse by probing rather than by asking it to start.
+    """
+    want = want_mode or desired_auth_mode()
     for port in _PORT_SCAN_RANGE:
         base = f"http://127.0.0.1:{port}/v1"
         if _probe(base):
-            return port
+            if _auth_mode_of(_health(_root_of(base))) == want:
+                return port
+            logger.info(
+                "clawrouter: proxy on :%d is on the other auth rail — looking further", port
+            )
+            continue
         if _port_free(port):
             return port
     raise RuntimeError(
         f"No free port in {_PORT_SCAN_RANGE.start}-{_PORT_SCAN_RANGE.stop - 1} "
-        f"and no reachable ClawRouter proxy on those ports."
+        f"and every reachable ClawRouter proxy there is on the other auth rail "
+        f"({'API key' if want == 'api-key' else 'wallet'} was requested). "
+        f"Stop one of them, or set CLAWROUTER_PROXY_URL."
     )
 
 
@@ -113,6 +186,32 @@ def _build_env() -> dict:
     return env
 
 
+def _npm_root() -> Path:
+    return state.STATE_DIR / "npm"
+
+
+def local_proxy_version() -> Optional[tuple[int, ...]]:
+    """Version of the pre-installed ``@blockrun/clawrouter``, if any.
+
+    ``None`` when nothing is installed there or the manifest is unreadable —
+    callers treat that as "cannot vouch for it", which is the safe reading.
+    """
+    manifest = (
+        _npm_root() / "node_modules" / "@blockrun" / "clawrouter" / "package.json"
+    )
+    try:
+        raw = json.loads(manifest.read_text(encoding="utf-8")).get("version")
+    except (OSError, ValueError, AttributeError):
+        return None
+    if not isinstance(raw, str):
+        return None
+    parts = raw.split("-", 1)[0].split(".")
+    try:
+        return tuple(int(p) for p in parts[:3])
+    except ValueError:
+        return None
+
+
 def _local_proxy_bin() -> Optional[str]:
     """Path to the proxy binary pre-installed by ``setup`` into
     ``~/.openclaw/npm`` (see ``cli._install_clawrouter_proxy``), if present.
@@ -120,9 +219,7 @@ def _local_proxy_bin() -> Optional[str]:
     Invoking it directly skips ``npx``'s resolve/link-into-``_npx`` step, so a
     warm pre-install gives a genuinely zero-download, zero-link first launch.
     """
-    bin_path = (
-        state.STATE_DIR / "npm" / "node_modules" / ".bin" / "clawrouter"
-    )
+    bin_path = _npm_root() / "node_modules" / ".bin" / "clawrouter"
     return str(bin_path) if bin_path.is_file() else None
 
 
@@ -131,11 +228,34 @@ def _spawn_cmd(port: int) -> tuple[list[str], Optional[str]]:
 
     Prefer the pre-installed binary in ``~/.openclaw/npm`` (no download/link
     latency); fall back to ``npx -y`` which resolves/installs on demand.
+
+    One exception overrides the fast path: a configured API key plus a
+    pre-install older than :data:`MIN_API_KEY_PROXY_VERSION`. That proxy
+    ignores the key without saying so and pays from the wallet instead, so we
+    pin ``@latest`` through npx — slower, but it spends the account the user
+    asked us to spend.
     """
     local = _local_proxy_bin()
     if local is not None:
+        installed = local_proxy_version()
+        if (
+            api_key.resolve() is not None
+            and (installed is None or installed < MIN_API_KEY_PROXY_VERSION)
+        ):
+            logger.warning(
+                "clawrouter: pre-installed proxy %s predates API-key support "
+                "(needs >= %s) and would pay from the wallet instead — "
+                "launching @latest via npx. Run `hermes-clawrouter setup` to "
+                "refresh the pre-install.",
+                ".".join(str(p) for p in installed) if installed else "(unknown)",
+                ".".join(str(p) for p in MIN_API_KEY_PROXY_VERSION),
+            )
+            return (
+                ["npx", "-y", "@blockrun/clawrouter@latest", "--port", str(port)],
+                None,
+            )
         # cwd at the npm root so the bin shim resolves its own deps cleanly.
-        return [local, "--port", str(port)], str(state.STATE_DIR / "npm")
+        return [local, "--port", str(port)], str(_npm_root())
     return ["npx", "-y", "@blockrun/clawrouter", "--port", str(port)], None
 
 
@@ -216,14 +336,21 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
     """
     global _process, _supervised_port
 
+    want = desired_auth_mode()
+
     if os.environ.get("CLAWROUTER_PROXY_URL", "").strip():
         base = state.proxy_base_url()
+        reachable = _probe(base)
+        health = _health(_root_of(base)) if reachable else None
         return ProxyStatus(
-            reachable=_probe(base),
+            reachable=reachable,
             base_url=base,
             port=0,
             pid=None,
             managed=False,
+            auth_mode=_auth_mode_of(health),
+            api_key_label=(health or {}).get("apiKey"),
+            gateway=(health or {}).get("gateway"),
         )
 
     do_spawn = state.autospawn_enabled() if autospawn is None else autospawn
@@ -231,14 +358,24 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
     with _lock:
         port = state.get_port()
         base = f"http://127.0.0.1:{port}/v1"
+        mode_mismatch = False
         if _probe(base):
-            return ProxyStatus(
-                reachable=True,
-                base_url=base,
-                port=port,
-                pid=_process.pid if _process else None,
-                managed=_process is not None,
-            )
+            health = _health(_root_of(base))
+            running_mode = _auth_mode_of(health)
+            if running_mode == want:
+                return ProxyStatus(
+                    reachable=True,
+                    base_url=base,
+                    port=port,
+                    pid=_process.pid if _process else None,
+                    managed=_process is not None,
+                    auth_mode=running_mode,
+                    api_key_label=(health or {}).get("apiKey"),
+                    gateway=(health or {}).get("gateway"),
+                )
+            # Reusing it would bill the other account. Leave it alone and go
+            # find a port of our own.
+            mode_mismatch = True
 
         if not do_spawn:
             return ProxyStatus(
@@ -247,8 +384,15 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
                 port=port,
                 pid=None,
                 managed=False,
+                auth_mode=want,
                 error=(
-                    "Proxy not running and HERMES_CLAWROUTER_AUTOSPAWN=0. "
+                    f"A ClawRouter proxy is running on :{port} but it is paying "
+                    f"with {'a wallet' if want == 'api-key' else 'an API key'}, not "
+                    f"{'an API key' if want == 'api-key' else 'a wallet'}. "
+                    "Stop it, or unset HERMES_CLAWROUTER_AUTOSPAWN=0 so a "
+                    "matching one can start on another port."
+                    if mode_mismatch
+                    else "Proxy not running and HERMES_CLAWROUTER_AUTOSPAWN=0. "
                     "Start it manually: npx @blockrun/clawrouter"
                 ),
             )
@@ -260,6 +404,7 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
                 port=port,
                 pid=None,
                 managed=False,
+                auth_mode=want,
                 error=(
                     "`npx` not found on PATH. Install Node.js 18+ from "
                     "https://nodejs.org and re-run."
@@ -267,11 +412,11 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
             )
 
         try:
-            port = _claim_port()
+            port = _claim_port(want)
         except RuntimeError as exc:
             return ProxyStatus(
                 reachable=False, base_url=base, port=port, pid=None,
-                managed=False, error=str(exc),
+                managed=False, auth_mode=want, error=str(exc),
             )
 
         base = f"http://127.0.0.1:{port}/v1"
@@ -287,7 +432,7 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
                 _process = None
         return ProxyStatus(
             reachable=False, base_url=base, port=port, pid=None,
-            managed=False,
+            managed=False, auth_mode=want,
             error=(
                 "ClawRouter proxy spawned but never became reachable within "
                 f"{int(_SPAWN_TIMEOUT_S)}s. Check `npx @blockrun/clawrouter` "
@@ -296,10 +441,14 @@ def ensure_running(*, autospawn: Optional[bool] = None) -> ProxyStatus:
         )
 
     _start_heartbeat()
+    health = _health(_root_of(base))
     return ProxyStatus(
         reachable=True, base_url=base, port=port,
         pid=_process.pid if _process else None,
         managed=True,
+        auth_mode=_auth_mode_of(health),
+        api_key_label=(health or {}).get("apiKey"),
+        gateway=(health or {}).get("gateway"),
     )
 
 
@@ -320,10 +469,16 @@ def status() -> ProxyStatus:
     """Non-spawning status check, suitable for ``doctor``."""
     base = state.proxy_base_url()
     reachable = _probe(base)
+    health = _health(_root_of(base)) if reachable else None
     return ProxyStatus(
         reachable=reachable,
         base_url=base,
         port=state.get_port(),
         pid=_process.pid if _process else None,
         managed=_process is not None,
+        # A running proxy's own /health is the truth; when nothing is running,
+        # report the rail this machine is configured for.
+        auth_mode=_auth_mode_of(health) if reachable else desired_auth_mode(),
+        api_key_label=(health or {}).get("apiKey"),
+        gateway=(health or {}).get("gateway"),
     )

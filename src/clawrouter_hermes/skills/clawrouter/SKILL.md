@@ -66,17 +66,41 @@ basics through common OS package managers when available.
 Then in a Hermes chat session:
 
 - Pick model `blockrun/auto` for smart routing across <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models.
-- `/clawrouter wallet` — show address + USDC balance
+- `/clawrouter account` — which rail you're paying on (wallet or API key)
+- `/clawrouter wallet` — show address + USDC balance (Solana and Base)
 - `/clawrouter stats` — proxy usage
 - `/clawrouter status` — proxy health
 - `/clawrouter route <eco|auto|premium>` — switch routing profile
+- `/clawrouter logout` — drop the API key, go back to the wallet
 - Tools: `clawrouter_image_generate`, `clawrouter_video_generate`, `clawrouter_web_search`
+
+## Two ways to pay
+
+Same catalog and same model ids either way — what differs is the credential and the host.
+
+| | Wallet (x402) | API key (account credit) |
+|---|---|---|
+| Set up | `npx @blockrun/clawrouter setup` | Sign in at https://user.blockrun.ai, mint a key |
+| Funding | USDC on Solana or Base | Card top-up at /dashboard/credits |
+| Gateway | `sol.blockrun.ai/api` · `blockrun.ai/api` | `api.blockrun.ai` |
+| Turn on | the default | `hermes-clawrouter login brk_live_…` |
+
+```bash
+hermes-clawrouter login brk_live_...   # bill account credit
+hermes-clawrouter account              # what's live right now
+hermes-clawrouter logout               # back to the x402 wallet
+```
+
+A key wins over a wallet whenever both are present, and nothing is deleted — `logout` reverses it.
+Needs `@blockrun/clawrouter` >= 0.12.268; older proxies ignore the key and spend the wallet instead.
+Key resolution order: `BLOCKRUN_API_KEY` env → `~/.blockrun/.api-key` → `~/.openclaw/blockrun/api-key`.
+Type keys in a terminal, never in a chat — `/clawrouter login` refuses for that reason.
 
 Wallet lives at `~/.openclaw/blockrun/mnemonic` (shared with the upstream TS CLI — fund once, use everywhere). Override with `BLOCKRUN_WALLET_KEY` env for headless setups. Set `CLAWROUTER_PROXY_URL` to point at an externally-managed proxy.
 
 ---
 
-Hosted-gateway LLM router that saves <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models from 12 providers (<!-- br:models.free -->7<!-- /br:models.free --> free models). All billing flows through one USDC wallet; you do not hold provider API keys.
+Hosted-gateway LLM router that saves <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models from 12 providers (<!-- br:models.free -->7<!-- /br:models.free --> free models). Billing flows through one credential — a local USDC wallet, or one BlockRun API key from https://user.blockrun.ai. Either way you do not hold provider API keys.
 
 **This is not a local-inference tool.** ClawRouter is a thin local proxy. Your prompts are sent over HTTPS to the blockrun.ai gateway for model execution. If your workload requires inference that never leaves your machine, use a local runtime like Ollama — ClawRouter is not the right tool for that use case.
 
@@ -85,14 +109,16 @@ Source: https://github.com/BlockRunAI/ClawRouter · npm: https://www.npmjs.com/p
 ## Data Flow
 
 ```
-Your app → localhost proxy (ClawRouter) → https://blockrun.ai/api  (or sol.blockrun.ai/api)
+Your app → localhost proxy (ClawRouter) → https://sol.blockrun.ai/api  (wallet, Solana)
+                                        → https://blockrun.ai/api      (wallet, Base)
+                                        → https://api.blockrun.ai      (API key)
                                               ↓
                                         OpenAI / Anthropic / Google / etc.
                                               ↓
                                         Response → back through proxy → your app
 ```
 
-**Sent to blockrun.ai on every request:** the model name, the full prompt/messages body, sampling params (temperature, max_tokens, tools, etc.), and an `X-PAYMENT` header containing a signed x402 USDC micropayment.
+**Sent to the gateway on every request:** the model name, the full prompt/messages body, sampling params (temperature, max_tokens, tools, etc.), and one credential — either an `X-PAYMENT` header containing a signed x402 USDC micropayment (wallet rail), or an `Authorization: Bearer brk_…` header (API-key rail). Never both: an x402 header on an API-key request is a payment nobody asked for, and the proxy strips it.
 
 **Not sent:** your wallet private key (only the detached payment signature is sent), any other local files, environment variables, or OpenClaw config beyond what's needed for this request.
 
@@ -101,6 +127,8 @@ Your app → localhost proxy (ClawRouter) → https://blockrun.ai/api  (or sol.b
 ## Credentials & Local Key Storage
 
 ClawRouter does **not** collect or forward third-party provider API keys. You do not supply OpenAI, Anthropic, Google, DeepSeek, xAI, or NVIDIA credentials — the blockrun.ai gateway owns those relationships.
+
+There is exactly one optional BlockRun credential: a `brk_…` API key, stored `0600` at `~/.blockrun/.api-key` (or supplied via `BLOCKRUN_API_KEY`) and sent as a bearer token to exactly one host, `api.blockrun.ai`. It is never logged in full — status output masks it to head-and-tail. It is optional: with no key configured, ClawRouter signs x402 payments from the local wallet instead and contacts no account service.
 
 **What `models.providers.blockrun` stores (fully enumerated):**
 
