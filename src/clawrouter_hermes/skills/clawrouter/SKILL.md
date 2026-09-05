@@ -53,7 +53,7 @@ Manual install, if you know Hermes' Python venv path:
 ```bash
 ~/.hermes/hermes-agent/venv/bin/python -m pip install -U hermes-plugin-clawrouter
 hermes plugins enable clawrouter
-hermes clawrouter setup       # installs the model-provider plugin + verifies wallet
+hermes clawrouter setup       # installs the model-provider plugin + verifies your rail (wallet or API key)
 hermes clawrouter doctor      # green = ready
 ```
 
@@ -134,7 +134,7 @@ There is exactly one optional BlockRun credential: a `brk_…` API key, stored `
 
 | Field       | Sensitive | Purpose                                                                                                                                                                                                    |
 | ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `walletKey` | Yes       | EVM private key used to sign USDC micropayments via x402. **Auto-generated locally on first run** — no user input required. Never transmitted over the network; only detached payment signatures are sent. |
+| `walletKey` | Yes       | EVM private key used to sign USDC micropayments via x402. **Auto-generated locally on first run of the wallet rail** — no user input required, and **not created at all when a `brk_…` API key is configured**, since nothing is signed on that rail. Never transmitted over the network; only detached payment signatures are sent. |
 | `solanaKey` | Yes       | Solana keypair (BIP-44 `m/44'/501'/0'/0'`). Auto-derived from the same local mnemonic via `@scure/bip32` + `@scure/bip39`.                                                                                 |
 | `gateway`   | No        | Gateway URL. Defaults: `https://blockrun.ai/api` (Base) · `https://sol.blockrun.ai/api` (Solana).                                                                                                          |
 | `routing`   | No        | Optional override of the default four-tier router.                                                                                                                                                         |
@@ -196,7 +196,7 @@ Rules handle ~80% of requests in <1ms. Only ambiguous queries hit the LLM classi
 
 ## Built-in Agent Tools
 
-In addition to LLM routing, ClawRouter exposes BlockRun's x402-gated data APIs as ready-to-use OpenClaw tools. Every tool is paid from the same USDC wallet — no extra setup, no extra API keys.
+In addition to LLM routing, ClawRouter exposes BlockRun's paid data APIs as ready-to-use OpenClaw tools. Every tool bills the rail you are already on — x402 USDC from the local wallet, or account credit when a `brk_…` key is configured — with no extra setup and no provider API keys. The only genuinely wallet-only surfaces are phone-number ownership and Polymarket trading.
 
 ### Market Data
 
