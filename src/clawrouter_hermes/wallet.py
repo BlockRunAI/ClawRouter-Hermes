@@ -44,6 +44,10 @@ def __getattr__(name: str):
         return _mnemonic_file()
     if name == "WALLET_KEY_FILE":
         return _wallet_key_file()
+    if name == "CHAIN_FILE":
+        return _chain_file()
+    if name == "CORE_CHAIN_FILE":
+        return _core_chain_file()
     raise AttributeError(name)
 
 USDC_BASE_CONTRACT = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -241,27 +245,78 @@ def wallet_summary() -> dict:
     }
 
 
-CHAIN_FILE = _wallet_dir() / "payment-chain"
-
-#: Solana leads everywhere it is listed — it is the rail BlockRun points people
-#: at first. Ordered, not a set, so every message that renders it agrees.
-#: The *default* is still Base: the file is shared machine-wide with the TS CLI
-#: (``resolvePaymentChain()``), and a Python-only default would make the two
-#: disagree about which chain an unconfigured machine actually pays on.
+#: Solana leads everywhere it is listed — it is the rail BlockRun prefers.
+#: Ordered, not a set, so every message that renders it agrees.
 CHAIN_ORDER = ("solana", "base")
 VALID_CHAINS = frozenset(CHAIN_ORDER)
 
+ENV_PAYMENT_CHAIN = "CLAWROUTER_PAYMENT_CHAIN"
+
+
+def _core_dir() -> Path:
+    """BlockRun Core — shared with every BlockRun product on the machine."""
+    return Path.home() / ".blockrun"
+
+
+def _chain_file() -> Path:
+    """Legacy ClawRouter chain file. Lazy, like every other path here — a
+    module-level constant freezes the value at import, which silently ignores
+    a HOME change and had this reading the developer's real ~/.openclaw."""
+    return _wallet_dir() / "payment-chain"
+
+
+def _core_chain_file() -> Path:
+    return _core_dir() / ".chain"
+
+
+def _has_existing_wallet() -> bool:
+    """Is there already a wallet on this machine? Read-only, never creates one.
+
+    Mirrors ``auth.ts::hasExistingWallet`` — the env key, the Core session, and
+    the legacy ``wallet.key``. Deliberately does *not* count the mnemonic: the
+    TS side does not either, and the two must agree on the answer.
+    """
+    if os.environ.get(ENV_WALLET_KEY, "").strip():
+        return True
+    return any(
+        p.is_file() for p in (_core_dir() / ".session", _wallet_dir() / "wallet.key")
+    )
+
 
 def current_payment_chain() -> str:
-    """Return the active payment chain ('solana' or 'base')."""
-    try:
-        return CHAIN_FILE.read_text(encoding="utf-8").strip().lower() or "base"
-    except OSError:
-        return "base"
+    """Return the active payment chain ('solana' or 'base').
+
+    A faithful mirror of ``ClawRouter/src/auth.ts::resolvePaymentChain`` →
+    ``loadPaymentChain``: env var, then the Core ``.chain`` file, then the
+    legacy ``payment-chain`` file, and only then a default. This has to track
+    the TS exactly — the proxy decides which chain it signs on, and the plugin
+    only *reports* it. Guessing differently means `/clawrouter wallet` tells
+    you "Paying on Base" while every request settles on Solana.
+
+    The default when nothing is recorded turns on whether a wallet already
+    exists. Solana is preferred, but an install predating that preference has
+    its USDC in the Base wallet and no Solana balance; flipping it would point
+    every request at a gateway its money is not on.
+    """
+    env = os.environ.get(ENV_PAYMENT_CHAIN, "").strip().lower()
+    if env in VALID_CHAINS:
+        return env
+    for path in (_core_chain_file(), _chain_file()):
+        try:
+            value = path.read_text(encoding="utf-8").strip().lower()
+        except OSError:
+            continue
+        if value in VALID_CHAINS:
+            return value
+    return "base" if _has_existing_wallet() else "solana"
 
 
 def set_payment_chain(chain: str) -> str:
     """Persist a new payment chain, return the confirmed value.
+
+    Writes **both** files, like ``auth.ts::savePaymentChain``. Writing only the
+    legacy one would leave a stale Core ``.chain`` shadowing it, since Core is
+    read first — the switch would appear to work and change nothing.
 
     Raises ``ValueError`` for unknown chain names.
     """
@@ -270,8 +325,10 @@ def set_payment_chain(chain: str) -> str:
         raise ValueError(
             f"Unknown chain '{chain}'. Valid: {', '.join(CHAIN_ORDER)}"
         )
-    CHAIN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CHAIN_FILE.write_text(chain, encoding="utf-8")
+    for path in (_chain_file(), _core_chain_file()):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(chain + "\n", encoding="utf-8")
+        path.chmod(0o600)
     return chain
 
 

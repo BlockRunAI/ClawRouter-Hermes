@@ -301,6 +301,8 @@ npx @blockrun/clawrouter setup
 
 Fund USDC on **Solana** or **Base** — $5 covers thousands of requests, non-custodial. The same wallet is shared with the upstream TS CLI and every other ClawRouter client on the machine: fund once, use everywhere. Switch chains with `/clawrouter wallet solana` or `/clawrouter wallet base` (machine-wide, and it restarts the proxy).
 
+**Which chain by default?** Solana. When nothing is recorded, a fresh machine prefers Solana — but a machine that already had a wallet before that preference existed stays on Base, because its USDC is sitting in the Base wallet and pointing it at a Solana gateway would fail every request against an empty balance. `CLAWROUTER_PAYMENT_CHAIN` overrides both. The plugin mirrors the upstream resolution order exactly (env → `~/.blockrun/.chain` → `~/.openclaw/blockrun/payment-chain` → that default) rather than guessing, because the proxy is what actually signs and the plugin only reports what it will do.
+
 **Headless / CI:** set `BLOCKRUN_WALLET_KEY=<0x raw EVM hex>` to bypass the mnemonic file (EVM-only — Solana derivation unavailable).
 
 Configuring an API key does **not** touch any of this. The mnemonic stays where it is, the balance stays where it is, and `logout` returns you to it.
@@ -316,6 +318,7 @@ Configuring an API key does **not** touch any of this. The mnemonic stays where 
 | `CLAWROUTER_PROXY_URL` | Point at an externally-managed proxy (e.g. `https://my-host/v1`). Skips local spawn entirely. |
 | `HERMES_CLAWROUTER_AUTOSPAWN=0` | Disable lazy spawn; require `npx @blockrun/clawrouter` to be running already. |
 | `BLOCKRUN_WALLET_KEY` | Raw EVM hex private key — overrides the mnemonic file. |
+| `CLAWROUTER_PAYMENT_CHAIN` | `solana` / `base`. Wins over both chain files. Wallet rail only — an API key has no chain to sign on. |
 | `CLAWROUTER_ROUTING_PROFILE` | `eco` / `auto` / `premium`. Forwarded to the proxy on spawn. |
 
 > **`CLAWROUTER_API_KEY` is not `BLOCKRUN_API_KEY`.** The names sit one word apart and mean opposite things. `CLAWROUTER_API_KEY` is a non-secret placeholder (`clawrouter-local`) that exists only because Hermes hides API-key-style providers from `/model` unless their key env var is set — putting a `brk_…` key there does nothing, since the local proxy replaces the client's `authorization` header on the way upstream. `BLOCKRUN_API_KEY` is the one that spends money.
