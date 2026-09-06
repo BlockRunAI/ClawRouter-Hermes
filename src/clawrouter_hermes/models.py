@@ -33,6 +33,7 @@ CHAT_MODELS = (
     "blockrun/openai/gpt-5.3-codex",
     "blockrun/google/gemini-3.1-pro",
     "blockrun/google/gemini-3.6-flash",
+    "blockrun/google/gemini-3.8-flash",
     "blockrun/google/gemini-3.5-flash",
     "blockrun/google/gemini-3.5-flash-lite",
     "blockrun/google/gemini-3.1-flash-lite",
