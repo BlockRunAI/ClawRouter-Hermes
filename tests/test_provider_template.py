@@ -210,9 +210,11 @@ def test_curated_picker_catalog_orders_featured_models():
 #: yet picked up upstream, so they are exempt from the mirror check until
 #: ClawRouter ships them. Drop each one from here the moment it lands in
 #: top-models.json — a stale entry silences the guard for a real drift.
-#: Empty since 2026-08-31: ClawRouter #290 landed all four, so the picker
-#: mirrors top-models.json entry for entry again.
-POST_TOP_MODELS_ADDITIONS: frozenset = frozenset()
+#: Gemini 3.8 Flash was validated through ClawRouter but has not landed in
+#: ClawRouter's curated top-models.json yet.
+POST_TOP_MODELS_ADDITIONS: frozenset = frozenset({
+    "blockrun/google/gemini-3.8-flash",
+})
 
 #: Entries whose picker placement deliberately diverges from top-models.json
 #: order; membership is still enforced. Empty since 2026-08-31 — its only
