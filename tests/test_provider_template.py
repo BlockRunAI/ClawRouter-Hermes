@@ -249,6 +249,19 @@ def test_curated_picker_catalog_mirrors_clawrouter_top_models():
 
     from clawrouter_hermes import models
 
+    # A stale exemption is worse than no exemption: it silences membership AND
+    # order for an ID upstream already carries. The comment on
+    # POST_TOP_MODELS_ADDITIONS says to drop each entry the moment it lands;
+    # this is what makes that instruction executable instead of aspirational.
+    landed = sorted(
+        model for model in POST_TOP_MODELS_ADDITIONS
+        if model.removeprefix("blockrun/") in top_models
+    )
+    assert not landed, (
+        "POST_TOP_MODELS_ADDITIONS entries have landed in top-models.json and "
+        f"must be dropped from the exemption: {landed}"
+    )
+
     mirrored = [
         model.removeprefix("blockrun/")
         for model in models.chat_models()
