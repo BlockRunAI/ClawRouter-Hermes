@@ -210,11 +210,14 @@ def test_curated_picker_catalog_orders_featured_models():
 #: yet picked up upstream, so they are exempt from the mirror check until
 #: ClawRouter ships them. Drop each one from here the moment it lands in
 #: top-models.json — a stale entry silences the guard for a real drift.
-#: Gemini 3.8 Flash was validated through ClawRouter but has not landed in
-#: ClawRouter's curated top-models.json yet.
-POST_TOP_MODELS_ADDITIONS: frozenset = frozenset({
-    "blockrun/google/gemini-3.8-flash",
-})
+#: Empty since 2026-09-06: ClawRouter 0.12.276 landed Gemini 3.8 Flash, its
+#: only member. That entry is why the "has it landed yet" assertion below
+#: exists — a picker ID ClawRouter does not carry in BLOCKRUN_MODELS makes
+#: estimateAmount() return undefined, which skips the pre-request balance
+#: check, projects $0 into the strict maxCostPerRun gate and never accumulates
+#: into session cost. An exemption is a cost-cap hole with a deadline, so the
+#: deadline is enforced rather than remembered.
+POST_TOP_MODELS_ADDITIONS: frozenset = frozenset()
 
 #: Entries whose picker placement deliberately diverges from top-models.json
 #: order; membership is still enforced. Empty since 2026-08-31 — its only
