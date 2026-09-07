@@ -1,5 +1,5 @@
 name: clawrouter
-version: 0.4.0
+version: 0.4.2
 description: "ClawRouter for Hermes — 76 models, smart routing, paid with x402 USDC (Solana or Base) or a BlockRun API key. Wraps the local ClawRouter proxy on http://127.0.0.1:8402."
 author: BlockRun
 kind: standalone
