@@ -518,3 +518,18 @@ Yes — set `CLAWROUTER_PROXY_URL` and the plugin skips the local spawn entirely
 ⭐ If ClawRouter powers your Hermes agent, consider starring the repo!
 
 </div>
+
+### Optional TWZRD payment screening
+
+For Python 3.11+ tool scripts, install `hermes-plugin-clawrouter[twzrd]` and
+register `clawrouter_hermes.twzrd.create_before_sign_hook()` on their official
+async x402 client. The bundled `twzrd-before-sign` skill explains wiring and
+scope. Installation does not automatically protect arbitrary tool payments.
+The optional extra pins Solana 0.36.10 because x402 2.13.1 imports the synchronous
+RPC module absent from Solana 0.40.3.
+
+For Node proxy x402 payments, set `TWZRD_AUTO_GATE=1` and
+`TWZRD_FAIL_OPEN=false` before startup. Existing environment inheritance forwards
+both flags to newly spawned proxies. Reused/external proxies need their own
+configuration; verify the Node gate package resolves and AutoGate activates.
+The Python hook neither changes proxy policy nor screens API-key billing.
