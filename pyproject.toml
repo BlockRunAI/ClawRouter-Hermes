@@ -56,6 +56,7 @@ clawrouter_hermes = [
     "provider_template/*.yaml",
     "provider_template/*.tmpl",
     "skills/clawrouter/*.md",
+    "skills/twzrd-before-sign/*.md",
 ]
 
 [tool.pytest.ini_options]

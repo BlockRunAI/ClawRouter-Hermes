@@ -261,15 +261,23 @@ def _register_cli(ctx) -> None:
 
 
 def _register_skill(ctx) -> None:
-    skill_path = Path(__file__).parent / "skills" / "clawrouter" / "SKILL.md"
-    if not skill_path.exists():
-        logger.debug("clawrouter: skill file missing at %s", skill_path)
-        return
-    try:
-        ctx.register_skill(
-            name="guide",
-            path=skill_path,
-            description="ClawRouter usage guide — models, pricing, wallet, slash commands",
-        )
-    except Exception as exc:
-        logger.debug("clawrouter: skill registration failed: %s", exc)
+    skills = (
+        (
+            "guide",
+            Path(__file__).parent / "skills" / "clawrouter" / "SKILL.md",
+            "ClawRouter usage guide — models, pricing, wallet, slash commands",
+        ),
+        (
+            "twzrd-before-sign",
+            Path(__file__).parent / "skills" / "twzrd-before-sign" / "SKILL.md",
+            "Opt-in TWZRD wash hook for Python x402Client tools (not Node proxy inference)",
+        ),
+    )
+    for name, skill_path, description in skills:
+        if not skill_path.exists():
+            logger.debug("clawrouter: skill file missing at %s", skill_path)
+            continue
+        try:
+            ctx.register_skill(name=name, path=skill_path, description=description)
+        except Exception as exc:
+            logger.debug("clawrouter: skill %s registration failed: %s", name, exc)

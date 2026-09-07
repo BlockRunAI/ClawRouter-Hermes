@@ -186,6 +186,16 @@ def _build_env() -> dict:
     # Tag the proxy's User-Agent as Hermes-originated. setdefault so an explicit
     # user-set CLAWROUTER_CLIENT wins.
     env.setdefault("CLAWROUTER_CLIENT", _CLIENT_TAG)
+    # TWZRD_AUTO_GATE / TWZRD_FAIL_OPEN are copied with os.environ above — do
+    # not setdefault them on. Node AutoGate (#357) stays opt-in. If they are
+    # set in the Hermes process (gateway env, not only an interactive shell),
+    # the spawned proxy sees the same values.
+    if env.get("TWZRD_AUTO_GATE") or env.get("TWZRD_GATE_ENABLED"):
+        logger.info(
+            "clawrouter: forwarding TWZRD AutoGate flags to proxy (TWZRD_AUTO_GATE=%s TWZRD_FAIL_OPEN=%s)",
+            env.get("TWZRD_AUTO_GATE", ""),
+            env.get("TWZRD_FAIL_OPEN", ""),
+        )
     return env
 
 

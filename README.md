@@ -320,6 +320,10 @@ Configuring an API key does **not** touch any of this. The mnemonic stays where 
 | `BLOCKRUN_WALLET_KEY` | Raw EVM hex private key — overrides the mnemonic file. |
 | `CLAWROUTER_PAYMENT_CHAIN` | `solana` / `base`. Wins over both chain files. Wallet rail only — an API key has no chain to sign on. |
 | `CLAWROUTER_ROUTING_PROFILE` | `eco` / `auto` / `premium`. Forwarded to the proxy on spawn. |
+| `TWZRD_AUTO_GATE=1` | Opt-in TWZRD wash on the **Node proxy** (ClawRouter #357). Copied into the spawned process via `_build_env()` (`dict(os.environ)`). Must be in the **Hermes gateway** environment, not only an interactive shell. Default off. |
+| `TWZRD_FAIL_OPEN=false` | On that same proxy, refuse if intel times out. ClawRouter default is fail-open on timeout. |
+
+Python tools that pay with `x402Client` (not 8402) must register `clawrouter_hermes.twzrd_before_sign.create_before_sign_hook` themselves. Skill `twzrd-before-sign` documents that path. It does not wrap Node signing.
 
 > **`CLAWROUTER_API_KEY` is not `BLOCKRUN_API_KEY`.** The names sit one word apart and mean opposite things. `CLAWROUTER_API_KEY` is a non-secret placeholder (`clawrouter-local`) that exists only because Hermes hides API-key-style providers from `/model` unless their key env var is set — putting a `brk_…` key there does nothing, since the local proxy replaces the client's `authorization` header on the way upstream. `BLOCKRUN_API_KEY` is the one that spends money.
 

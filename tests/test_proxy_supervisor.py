@@ -108,6 +108,20 @@ def test_build_env_respects_explicit_client_override(isolated_home, monkeypatch)
     assert env["CLAWROUTER_CLIENT"] == "custom-host/9.9"
 
 
+def test_build_env_forwards_twzrd_flags_without_defaulting_them_on(isolated_home, monkeypatch):
+    from clawrouter_hermes import proxy_supervisor
+
+    monkeypatch.delenv("TWZRD_AUTO_GATE", raising=False)
+    monkeypatch.delenv("TWZRD_FAIL_OPEN", raising=False)
+    env = proxy_supervisor._build_env()
+    assert "TWZRD_AUTO_GATE" not in env or not env.get("TWZRD_AUTO_GATE")
+    monkeypatch.setenv("TWZRD_AUTO_GATE", "1")
+    monkeypatch.setenv("TWZRD_FAIL_OPEN", "false")
+    env = proxy_supervisor._build_env()
+    assert env["TWZRD_AUTO_GATE"] == "1"
+    assert env["TWZRD_FAIL_OPEN"] == "false"
+
+
 # ---------------------------------------------------------------------------
 # Auth-rail guards. Both of these are money bugs when they regress: one spends
 # the wallet a customer parked, the other bills the account they logged out of.
