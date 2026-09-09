@@ -1,6 +1,6 @@
 ---
 name: clawrouter
-description: Hosted-gateway LLM router — save 87% on inference costs. A local proxy that forwards each request to the blockrun.ai gateway, which routes to the cheapest capable model across <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models from OpenAI, Anthropic, Google, DeepSeek, xAI, NVIDIA, and more. <!-- br:models.free -->7<!-- /br:models.free --> free models included. Also exposes realtime market data (global stocks, crypto, FX, commodities), Twitter/X intelligence, and prediction-market data across Polymarket, Kalshi, Limitless, Opinion, Predict.Fun, dFlow + UMA oracle resolution + wallet identity & clustering as built-in agent tools. Not a local-inference tool — prompts are sent to the blockrun.ai gateway.
+description: Hosted-gateway LLM router — save 87% on inference costs. A local proxy that forwards each request to the blockrun.ai gateway, which routes to the cheapest capable model across <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> models from OpenAI, Anthropic, Google, DeepSeek, xAI, NVIDIA, and more. <!-- br:models.free -->6<!-- /br:models.free --> free models included. Also exposes realtime market data (global stocks, crypto, FX, commodities), Twitter/X intelligence, and prediction-market data across Polymarket, Kalshi, Limitless, Opinion, Predict.Fun, dFlow + UMA oracle resolution + wallet identity & clustering as built-in agent tools. Not a local-inference tool — prompts are sent to the blockrun.ai gateway.
 triggers:
   - "clawrouter"
   - "claw router"
@@ -65,7 +65,7 @@ basics through common OS package managers when available.
 
 Then in a Hermes chat session:
 
-- Pick model `blockrun/auto` for smart routing across <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models.
+- Pick model `blockrun/auto` for smart routing across <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> models.
 - `/clawrouter account` — which rail you're paying on (wallet or API key)
 - `/clawrouter wallet` — show address + USDC balance (Solana and Base)
 - `/clawrouter stats` — proxy usage
@@ -100,7 +100,7 @@ Wallet lives at `~/.openclaw/blockrun/mnemonic` (shared with the upstream TS CLI
 
 ---
 
-Hosted-gateway LLM router that saves <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models from 12 providers (<!-- br:models.free -->7<!-- /br:models.free --> free models). Billing flows through one credential — a local USDC wallet, or one BlockRun API key from https://user.blockrun.ai. Either way you do not hold provider API keys.
+Hosted-gateway LLM router that saves <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> models from 12 providers (<!-- br:models.free -->6<!-- /br:models.free --> free models). Billing flows through one credential — a local USDC wallet, or one BlockRun API key from https://user.blockrun.ai. Either way you do not hold provider API keys.
 
 **This is not a local-inference tool.** ClawRouter is a thin local proxy. Your prompts are sent over HTTPS to the blockrun.ai gateway for model execution. If your workload requires inference that never leaves your machine, use a local runtime like Ollama — ClawRouter is not the right tool for that use case.
 
@@ -192,7 +192,7 @@ Rules handle ~80% of requests in <1ms. Only ambiguous queries hit the LLM classi
 
 ## Available Models
 
-<!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models including: claude-fable-5, claude-opus-5, claude-opus-4.8, claude-opus-4.7, claude-sonnet-5, claude-sonnet-4.6, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.4, gemini-3.1-pro, gemini-3.5-flash, grok-4.5, grok-4.3, grok-build-0.1, deepseek-v4-pro, deepseek-v4-flash-vision-exp [vision], deepseek-chat, glm-5.2, kimi-k3, minimax-m3, qwen3.7-max, and the curated free models (nemotron-3.5-lightning, nemotron-3-nano-30b, laguna-xs-2.1, north-mini-code, nemotron-3-nano-omni-30b-a3b-reasoning [vision], nemotron-3-ultra-550b, llama-3.2-11b-vision [vision]).
+<!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> models including: claude-fable-5, claude-opus-5, claude-opus-4.8, claude-opus-4.7, claude-sonnet-5, claude-sonnet-4.6, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5, gpt-5.4, gemini-3.1-pro, gemini-3.5-flash, grok-4.5, grok-4.3, grok-build-0.1, deepseek-v4-pro, deepseek-v4-flash-vision-exp [vision], deepseek-chat, glm-5.2, kimi-k3, minimax-m3, qwen3.7-max, and the curated free models (nemotron-3.5-lightning, nemotron-3-nano-30b, laguna-xs-2.1, north-mini-code, nemotron-3-nano-omni-30b-a3b-reasoning [vision], nemotron-3-ultra-550b, llama-3.2-11b-vision [vision]).
 
 ## Built-in Agent Tools
 

@@ -6,13 +6,13 @@
 
 <p>Hermes gives your agent a body. ClawRouter gives it a way to pay.<br>
 No provider accounts. No per-lab keys. Two rails, one provider block.<br><br>
-<strong>One Hermes provider, <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models from 12 labs, paid per request —<br>
+<strong>One Hermes provider, <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> models from 12 labs, paid per request —<br>
 USDC from a local wallet, or account credit on one BlockRun key.</strong><br><br>
-<em><!-- br:models.free -->7<!-- /br:models.free --> models free — no crypto, no balance, no signup required.</em></p>
+<em><!-- br:models.free -->6<!-- /br:models.free --> models free — no crypto, no balance, no signup required.</em></p>
 
 <br>
 
-<img src="https://img.shields.io/badge/🆓_<!-- br:models.free -->7<!-- /br:models.free -->_Free_Models-success?style=for-the-badge" alt="free models">&nbsp;
+<img src="https://img.shields.io/badge/🆓_<!-- br:models.free -->6<!-- /br:models.free -->_Free_Models-success?style=for-the-badge" alt="free models">&nbsp;
 <img src="https://img.shields.io/badge/🐍_Hermes_Plugin-black?style=for-the-badge" alt="Hermes plugin">&nbsp;
 <img src="https://img.shields.io/badge/🔑_Wallet_or_API_Key-blue?style=for-the-badge" alt="Wallet or API key">&nbsp;
 <img src="https://img.shields.io/badge/⚡_Smart_Routing-yellow?style=for-the-badge" alt="Smart routing">&nbsp;
@@ -35,7 +35,7 @@ USDC from a local wallet, or account credit on one BlockRun key.</strong><br><br
 
 </div>
 
-> **hermes-plugin-clawrouter** wires [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) into [ClawRouter](https://github.com/BlockRunAI/ClawRouter), the open-source LLM router built for autonomous agents. One `pip install` gives Hermes <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> chat models from OpenAI, Anthropic, Google, xAI, DeepSeek, Moonshot, Z.ai, MiniMax, Qwen, NVIDIA and more — plus image, video and web-search tools — behind a single local provider. Requests are scored across <!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions --> dimensions and routed to the cheapest capable model in under 1ms, cutting inference cost by <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% versus pinning Claude Opus 5. Pay however suits you: sign a USDC [x402](https://x402.org) micropayment per call from a local wallet on Solana or Base, **or** sign up at [user.blockrun.ai](https://user.blockrun.ai), top up with a card and use one `brk_…` key. <!-- br:models.free -->7<!-- /br:models.free --> models cost nothing on either rail. MIT licensed.
+> **hermes-plugin-clawrouter** wires [NousResearch Hermes](https://github.com/NousResearch/hermes-agent) into [ClawRouter](https://github.com/BlockRunAI/ClawRouter), the open-source LLM router built for autonomous agents. One `pip install` gives Hermes <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> chat models from OpenAI, Anthropic, Google, xAI, DeepSeek, Moonshot, Z.ai, MiniMax, Qwen, NVIDIA and more — plus image, video and web-search tools — behind a single local provider. Requests are scored across <!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions --> dimensions and routed to the cheapest capable model in under 1ms, cutting inference cost by <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% versus pinning Claude Opus 5. Pay however suits you: sign a USDC [x402](https://x402.org) micropayment per call from a local wallet on Solana or Base, **or** sign up at [user.blockrun.ai](https://user.blockrun.ai), top up with a card and use one `brk_…` key. <!-- br:models.free -->6<!-- /br:models.free --> models cost nothing on either rail. MIT licensed.
 
 ---
 
@@ -83,7 +83,7 @@ Stock Hermes wants a **provider block and an API key per lab**. Want Claude *and
 
 ClawRouter collapses the whole thing into one provider:
 
-- **Starts at $0** — <!-- br:models.free -->7<!-- /br:models.free --> free models, usable before you pay anyone anything
+- **Starts at $0** — <!-- br:models.free -->6<!-- /br:models.free --> free models, usable before you pay anyone anything
 - **One provider, every lab** — Hermes' `/model` picker shows the full curated catalog, grouped by provider
 - **No lab keys, ever** — you hold at most one BlockRun credential, never OpenAI's or Anthropic's
 - **Pay how you like** — a wallet signature *or* one `brk_…` key; the plugin follows whichever is configured
@@ -97,8 +97,8 @@ ClawRouter collapses the whole thing into one provider:
 
 |                     | Hermes + lab API keys       | Hermes + OpenRouter | Local Ollama       | **ClawRouter for Hermes**                                             |
 | ------------------- | --------------------------- | ------------------- | ------------------ | --------------------------------------------------------------------- |
-| **Models**          | One provider block per lab  | Many                | Whatever you host  | **<!-- br:models.chatVisible -->76<!-- /br:models.chatVisible -->, one block**            |
-| **Free tier**       | No                          | Rate-limited        | Free but local GPU | **<!-- br:models.free -->7<!-- /br:models.free --> models, no signup** |
+| **Models**          | One provider block per lab  | Many                | Whatever you host  | **<!-- br:models.chatVisible -->78<!-- /br:models.chatVisible -->, one block**            |
+| **Free tier**       | No                          | Rate-limited        | Free but local GPU | **<!-- br:models.free -->6<!-- /br:models.free --> models, no signup** |
 | **Auth**            | An API key per lab          | Account + API key   | None               | **Wallet signature, or one BlockRun key**                             |
 | **Payment**         | Per-lab invoices            | Credit card         | Your electricity   | **USDC per request, or account credit**                               |
 | **Model selection** | Manual                      | Manual              | Manual             | **Automatic (<!-- br:clawrouter.dimensions -->15<!-- /br:clawrouter.dimensions -->-dim scoring, <1ms)** |
@@ -176,7 +176,7 @@ Check either with `/clawrouter account` in chat, or `hermes-clawrouter account` 
 
 ### Models
 
-The `/model` picker carries a curated, provider-grouped slice of the catalog (small inline keyboards can't render <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> entries); every other model stays routable by full ID.
+The `/model` picker carries a curated, provider-grouped slice of the catalog (small inline keyboards can't render <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> entries); every other model stays routable by full ID.
 
 | Provider          | In the picker                                                                                      |
 | ----------------- | -------------------------------------------------------------------------------------------------- |
@@ -430,7 +430,7 @@ pytest
 
 **ClawRouter for NousResearch Hermes**
 
-You're here. <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models, smart routing, wallet or API key.
+You're here. <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> models, smart routing, wallet or API key.
 
 `pip install hermes-plugin-clawrouter`
 
@@ -454,7 +454,7 @@ The canonical TypeScript proxy this plugin wraps. Works with any OpenAI-compatib
 
 **BlockRun for Claude Code**
 
-Claude Code on <!-- br:models.chatVisible -->76<!-- /br:models.chatVisible --> models — no Anthropic account, no rate limits, pay per request.
+Claude Code on <!-- br:models.chatVisible -->78<!-- /br:models.chatVisible --> models — no Anthropic account, no rate limits, pay per request.
 
 `curl -fsSL https://blockrun.ai/brcc-install | bash`
 
@@ -483,7 +483,7 @@ No. It adds one more provider. Existing OpenAI/Anthropic/OAuth blocks in `config
 
 ### Do I need crypto to try it?
 
-No. <!-- br:models.free -->7<!-- /br:models.free --> models are free with no wallet, no balance and no signup. Beyond that you can pay with a card at [user.blockrun.ai](https://user.blockrun.ai) and never touch a wallet at all.
+No. <!-- br:models.free -->6<!-- /br:models.free --> models are free with no wallet, no balance and no signup. Beyond that you can pay with a card at [user.blockrun.ai](https://user.blockrun.ai) and never touch a wallet at all.
 
 ### If I switch to an API key, what happens to my wallet?
 
