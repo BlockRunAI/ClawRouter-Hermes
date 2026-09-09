@@ -221,7 +221,7 @@ There is no `/clawrouter login` — it refuses on purpose, and points you at the
 
 | Tool                        | Coverage                                                                                  |
 | --------------------------- | ----------------------------------------------------------------------------------------- |
-| `clawrouter_image_generate` | <!-- br:models.image -->9<!-- /br:models.image --> image models — GPT Image 2, Nano Banana / Pro, Seedream 5 Pro, Grok Imagine, CogView-4 |
+| `clawrouter_image_generate` | <!-- br:models.image -->10<!-- /br:models.image --> image models — GPT Image 2, Nano Banana / Pro, Seedream 5 Pro, Grok Imagine, CogView-4 |
 | `clawrouter_video_generate` | <!-- br:models.video -->8<!-- /br:models.video --> video models — Seedance 1.5 / 2.0, Grok Imagine, Sora 2 |
 | `clawrouter_web_search`     | Exa-powered web search                                                                    |
 
