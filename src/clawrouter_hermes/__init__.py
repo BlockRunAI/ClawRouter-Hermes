@@ -39,6 +39,7 @@ def register(ctx) -> None:
     _register_slash_command(ctx)
     _register_cli(ctx)
     _register_skill(ctx)
+    _register_twzrd_skill(ctx)
     # Best-effort, non-blocking probe so users see whether the proxy is up
     # without paying spawn latency at startup.
     try:
@@ -273,3 +274,15 @@ def _register_skill(ctx) -> None:
         )
     except Exception as exc:
         logger.debug("clawrouter: skill registration failed: %s", exc)
+
+
+def _register_twzrd_skill(ctx) -> None:
+    """Expose opt-in instructions without importing optional payment dependencies."""
+    try:
+        ctx.register_skill(
+            name="twzrd-before-sign",
+            path=Path(__file__).parent / "skills" / "twzrd-before-sign" / "SKILL.md",
+            description="Opt-in pre-sign wash screening for Python x402 clients",
+        )
+    except Exception as exc:
+        logger.debug("clawrouter: TWZRD skill registration failed: %s", exc)
