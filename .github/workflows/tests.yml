@@ -26,6 +26,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  twzrd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[dev,twzrd]"
+      - run: python -m pytest -q tests/test_twzrd.py tests/test_twzrd_svm.py tests/test_twzrd_integration.py
+
   pytest:
     runs-on: ubuntu-latest
     steps:
