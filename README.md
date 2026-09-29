@@ -12,7 +12,7 @@ USDC from a local wallet, or account credit on one BlockRun key.</strong><br><br
 
 <br>
 
-<img src="https://img.shields.io/badge/🆓_<!-- br:models.free -->6<!-- /br:models.free -->_Free_Models-success?style=for-the-badge" alt="free models">&nbsp;
+<img src="https://img.shields.io/badge/🆓_6_Free_Models-success?style=for-the-badge" alt="6 free models">&nbsp;
 <img src="https://img.shields.io/badge/🐍_Hermes_Plugin-black?style=for-the-badge" alt="Hermes plugin">&nbsp;
 <img src="https://img.shields.io/badge/🔑_Wallet_or_API_Key-blue?style=for-the-badge" alt="Wallet or API key">&nbsp;
 <img src="https://img.shields.io/badge/⚡_Smart_Routing-yellow?style=for-the-badge" alt="Smart routing">&nbsp;
