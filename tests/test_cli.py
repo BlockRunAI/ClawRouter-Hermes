@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import yaml
 
 from clawrouter_hermes import _VERSION, cli
 
@@ -137,3 +138,39 @@ def test_main_dispatches_update(monkeypatch):
     cli.main(["update"])
 
     assert len(called) == 1
+
+
+def test_models_sync_write_updates_provider_file_and_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    catalog = [
+        {
+            "id": "openai/gpt-6-astra",
+            "categories": ["chat"],
+            "billing_mode": "paid",
+            "available": True,
+        },
+        {
+            "id": "anthropic/claude-fable-5.1",
+            "categories": ["chat"],
+            "billing_mode": "paid",
+            "available": True,
+        },
+    ]
+    monkeypatch.setattr(cli.catalog_sync, "fetch_catalog", lambda url: catalog)
+
+    cli._models_sync(Namespace(url="https://example.test/models", cap=20, write=True))
+
+    provider_init = tmp_path / ".hermes" / "plugins" / "model-providers" / "clawrouter" / "__init__.py"
+    expected = [
+        "blockrun/auto",
+        "blockrun/premium",
+        "blockrun/eco",
+        "blockrun/free",
+        "blockrun/anthropic/claude-fable-5.1",
+        "blockrun/openai/gpt-6-astra",
+    ]
+    assert cli.catalog_sync.read_materialized_provider(provider_init) == expected
+
+    config = yaml.safe_load((tmp_path / ".hermes" / "config.yaml").read_text(encoding="utf-8"))
+    assert config["providers"]["clawrouter"]["models"] == expected
