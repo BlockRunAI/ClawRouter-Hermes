@@ -21,7 +21,7 @@ from importlib import metadata, resources
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
-from . import api_key, models, proxy_supervisor, state, tools, wallet
+from . import api_key, catalog_sync, models, proxy_supervisor, state, tools, wallet
 
 #: Distribution name as declared in ``pyproject.toml``. Kept as a constant so
 #: tests can assert it still matches, since a typo would silently degrade
@@ -156,6 +156,16 @@ def register_cli(subparser: argparse.ArgumentParser) -> None:
     stats_p = subs.add_parser("stats", help="Show proxy usage stats")
     stats_p.set_defaults(func=_stats)
 
+    models_p = subs.add_parser("models", help="Inspect or sync the ClawRouter picker catalog")
+    models_subs = models_p.add_subparsers(dest="models_command", required=True)
+    sync_p = models_subs.add_parser("sync", help="Generate the picker from the live BlockRun catalog")
+    mode = sync_p.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--dry-run", action="store_true", help="Print the generated picker without writing files")
+    mode.add_argument("--write", action="store_true", help="Update the materialized provider and config row")
+    sync_p.add_argument("--url", default=catalog_sync.CATALOG_URL, help="Catalog URL to fetch")
+    sync_p.add_argument("--cap", type=int, default=catalog_sync.MAX_PICKER_MODELS, help="Maximum picker entries")
+    sync_p.set_defaults(func=_models_sync)
+
     subparser.set_defaults(func=_default_help)
 
 
@@ -175,7 +185,7 @@ def clawrouter_command(args: argparse.Namespace) -> None:
 def _default_help(_: argparse.Namespace) -> None:
     print(
         "Usage: hermes-clawrouter "
-        "<setup|update|login|logout|account|wallet|doctor|route|stats>\n\n"
+        "<setup|update|login|logout|account|wallet|doctor|route|stats|models>\n\n"
         "Run `hermes-clawrouter <sub> --help` for details.",
     )
 
@@ -594,7 +604,7 @@ def _configure_hermes_provider(*, set_default_force: bool = False) -> bool:
         "transport": "openai_chat",
         "default_model": "blockrun/auto",
         "discover_models": False,
-        "models": models.chat_models(),
+        "models": _active_picker_models(),
     }
     current = providers.get("clawrouter")
     if not isinstance(current, dict):
@@ -623,6 +633,51 @@ def _base_url() -> str:
     return os.environ.get("CLAWROUTER_PROXY_URL", "http://127.0.0.1:8402/v1").rstrip("/")
 
 
+def _active_picker_models() -> list[str]:
+    """Best local picker catalog: live-synced materialized provider, else package fallback."""
+    provider_init = _provider_plugin_dir() / "__init__.py"
+    if provider_init.is_file():
+        try:
+            return catalog_sync.read_materialized_provider(provider_init)
+        except Exception:
+            pass
+    return models.chat_models()
+
+
+def _update_hermes_provider_models(model_ids: list[str]) -> bool:
+    """Refresh the config row that gateway pickers read without changing the user's default model."""
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return False
+
+    path = _config_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = path.read_text(encoding="utf-8") if path.exists() else ""
+    config = yaml.safe_load(raw) if raw.strip() else {}
+    if not isinstance(config, dict):
+        config = {}
+    providers = config.setdefault("providers", {})
+    if not isinstance(providers, dict):
+        providers = {}
+        config["providers"] = providers
+    current = providers.setdefault("clawrouter", {})
+    if not isinstance(current, dict):
+        current = {}
+        providers["clawrouter"] = current
+    current.update({
+        "name": "ClawRouter",
+        "base_url": _base_url(),
+        "key_env": "CLAWROUTER_API_KEY",
+        "transport": "openai_chat",
+        "default_model": "blockrun/auto",
+        "discover_models": False,
+        "models": list(model_ids),
+    })
+    path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    return True
+
+
 def install_hermes_compat(*, force_provider: bool = False, set_default: bool = False) -> None:
     """Best-effort one-shot install for Hermes plugin/provider integration."""
     if force_provider or not _provider_plugin_dir().exists():
@@ -642,9 +697,10 @@ def patch_hermes_model_catalog() -> None:
         from hermes_cli import models as hermes_models  # type: ignore
     except Exception:
         return
+    picker_models = _active_picker_models()
     provider_models = getattr(hermes_models, "_PROVIDER_MODELS", None)
     if isinstance(provider_models, dict):
-        provider_models["clawrouter"] = models.chat_models()
+        provider_models["clawrouter"] = picker_models
 
     if getattr(hermes_models, "_clawrouter_catalog_patched", False):
         return
@@ -657,7 +713,7 @@ def patch_hermes_model_catalog() -> None:
 
         def provider_model_ids(provider, *args, **kwargs):
             if _is_clawrouter(provider):
-                return models.chat_models()
+                return _active_picker_models()
             return original_provider_model_ids(provider, *args, **kwargs)
 
         hermes_models.provider_model_ids = provider_model_ids
@@ -667,7 +723,7 @@ def patch_hermes_model_catalog() -> None:
 
         def cached_provider_model_ids(provider, *args, **kwargs):
             if _is_clawrouter(provider):
-                return models.chat_models()
+                return _active_picker_models()
             return original_cached_provider_model_ids(provider, *args, **kwargs)
 
         hermes_models.cached_provider_model_ids = cached_provider_model_ids
@@ -679,6 +735,34 @@ def patch_hermes_model_catalog() -> None:
         pass
 
     hermes_models._clawrouter_catalog_patched = True
+
+
+def _models_sync(args: argparse.Namespace) -> None:
+    catalog = catalog_sync.fetch_catalog(str(getattr(args, "url", catalog_sync.CATALOG_URL)))
+    provider_init = _provider_plugin_dir() / "__init__.py"
+    current = None
+    if provider_init.is_file():
+        try:
+            current = catalog_sync.read_materialized_provider(provider_init)
+        except Exception:
+            current = None
+    result = catalog_sync.generate_picker(
+        catalog,
+        current=current,
+        cap=int(getattr(args, "cap", catalog_sync.MAX_PICKER_MODELS)),
+    )
+    print(catalog_sync.result_summary(result))
+    if not getattr(args, "write", False):
+        return
+
+    if not provider_init.is_file():
+        _materialize_provider_plugin(force=False)
+    backup = catalog_sync.write_materialized_provider(provider_init, result.models)
+    _update_hermes_provider_models(result.models)
+    patch_hermes_model_catalog()
+    print(f"Updated materialized provider: {provider_init}")
+    print(f"Backup: {backup}")
+    print("Restart any running Hermes gateway to load the refreshed catalog.")
 
 
 def _wallet(args: argparse.Namespace) -> None:

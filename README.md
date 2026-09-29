@@ -182,7 +182,7 @@ The `/model` picker carries a curated, provider-grouped slice of the catalog (sm
 | ----------------- | -------------------------------------------------------------------------------------------------- |
 | **Routing**       | `blockrun/auto` · `blockrun/premium` · `blockrun/eco` · `blockrun/free`                             |
 | **Anthropic**     | claude-fable-5 · opus-5 · opus-4.8 · opus-4.7 · sonnet-5 · sonnet-4.6 · haiku-4.5                   |
-| **OpenAI**        | gpt-5.6-terra / sol / luna · gpt-5.5 · gpt-5.5-pro · gpt-5.4-pro / 5.4 / mini / nano · gpt-5.3-codex |
+| **OpenAI**        | gpt-5.6-terra / sol / luna · gpt-5.5 · gpt-5.4 / mini / nano · gpt-5.3-codex |
 | **Google**        | gemini-3.1-pro · gemini-3.8-flash · gemini-3.6-flash · gemini-3.5-flash · gemini-3.5-flash-lite · gemini-3.1-flash-lite · gemini-3-flash-preview |
 | **xAI**           | grok-4.5 · grok-4.3 · grok-build-0.1                                                                |
 | **DeepSeek**      | deepseek-v4-flash-vision-exp (vision) · deepseek-v4-pro · deepseek-chat · deepseek-reasoner         |
@@ -230,7 +230,7 @@ All three bill from whichever rail you're on — wallet or account credit — wi
 ### CLI
 
 ```bash
-hermes-clawrouter <setup|update|login|logout|account|wallet|doctor|route|stats>
+hermes-clawrouter <setup|update|login|logout|account|wallet|doctor|route|stats|models>
 ```
 
 | Subcommand | What it does |
@@ -240,6 +240,8 @@ hermes-clawrouter <setup|update|login|logout|account|wallet|doctor|route|stats>
 | `account` | Which rail is live, which gateway, the key masked (`--json` for scripts) |
 | `wallet` | Solana + Base addresses and USDC balances (`--json`) |
 | `doctor` | Health check — the credential checks follow whichever rail is configured |
+| `models sync --dry-run` | Preview the Hermes picker generated from the live BlockRun catalog |
+| `models sync --write` | Refresh the materialized provider and `config.yaml` picker row |
 
 `hermes-clawrouter` ships as its own entry point because some Hermes releases don't register plugin-defined top-level CLI commands until the plugin is enabled. Once it's loaded, `hermes clawrouter <sub>` usually works too.
 
