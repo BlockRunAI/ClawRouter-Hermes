@@ -115,6 +115,31 @@ def test_provider_init_template_calls_register_provider():
     assert "CLAWROUTER_API_KEY" in text
 
 
+def test_descriptions_carry_no_model_count():
+    """Plain-text descriptions (pyproject, plugin.yaml, the provider template)
+    cannot hold a brand-number marker, so a typed count there goes stale the
+    moment the catalog moves — "82 models" sat in all three after it did.
+    They describe the catalog without a number instead."""
+    import re
+
+    count = re.compile(r"\b\d+\+?\s+models\b", re.IGNORECASE)
+    root = _repo_root()
+    sources = {
+        "pyproject.toml": (root / "pyproject.toml").read_text(encoding="utf-8"),
+        "plugin.yaml": resources.files("clawrouter_hermes")
+        .joinpath("plugin.yaml")
+        .read_text(encoding="utf-8"),
+        "init.py.tmpl": _template_dir()
+        .joinpath("init.py.tmpl")
+        .read_text(encoding="utf-8"),
+    }
+    for name, text in sources.items():
+        for line in text.splitlines():
+            if "description" in line:
+                assert not count.search(line), f"{name}: typed model count in {line!r}"
+        assert "every BlockRun model" in text, f"{name}: description lost its wording"
+
+
 def test_provider_template_uses_curated_picker_catalog_only():
     text = _template_dir().joinpath("init.py.tmpl").read_text(encoding="utf-8")
     assert "models_url" not in text
