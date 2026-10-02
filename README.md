@@ -181,15 +181,15 @@ The `/model` picker carries a curated, provider-grouped slice of the catalog (sm
 | Provider          | In the picker                                                                                      |
 | ----------------- | -------------------------------------------------------------------------------------------------- |
 | **Routing**       | `blockrun/auto` · `blockrun/premium` · `blockrun/eco` · `blockrun/free`                             |
-| **Anthropic**     | claude-fable-5 · opus-5 · opus-4.8 · opus-4.7 · sonnet-5 · sonnet-4.6 · haiku-4.5                   |
-| **OpenAI**        | gpt-5.6-terra / sol / luna · gpt-5.5 · gpt-5.5-pro · gpt-5.4-pro / 5.4 / mini / nano · gpt-5.3-codex |
+| **Anthropic**     | claude-fable-5.1 · fable-5 · opus-5.5 · opus-5 · opus-4.8 · opus-4.7 · sonnet-5.5 · sonnet-5 · sonnet-4.6 · haiku-4.5 |
+| **OpenAI**        | gpt-6-astra / sol / luna · gpt-5.6-terra / sol / luna · gpt-5.5 · gpt-5.5-pro · gpt-5.4-pro / 5.4 / mini / nano · gpt-5.1 · gpt-5.3-codex |
 | **Google**        | gemini-3.1-pro · gemini-3.8-flash · gemini-3.6-flash · gemini-3.5-flash · gemini-3.5-flash-lite · gemini-3.1-flash-lite · gemini-3-flash-preview |
-| **xAI**           | grok-4.5 · grok-4.3 · grok-build-0.1                                                                |
+| **xAI**           | grok-4.7 · grok-4.6 · grok-4.5 · grok-4.3 · grok-build-0.1                                          |
 | **DeepSeek**      | deepseek-v4-flash-vision-exp (vision) · deepseek-v4-pro · deepseek-chat · deepseek-reasoner         |
 | **Z.ai**          | glm-5.3 · glm-5.3-flash · glm-5.2 · glm-5.1 · glm-5-turbo · glm-5                                   |
-| **Xiaomi / Tencent** | mimo-v2.5 (vision) · mimo-v2.5-pro · hy3                                                         |
+| **Xiaomi**        | mimo-v2.5 (vision) · mimo-v2.5-pro                                                                 |
 | **Moonshot / Qwen / MiniMax** | kimi-k3 · qwen3.7-max · qwen3.8-flash · minimax-m3 · minimax-m2.7                       |
-| **Free**          | nemotron-3.5-lightning · nemotron-3-nano-30b · laguna-xs-2.1 · north-mini-code · nemotron-3-nano-omni (vision) · nemotron-3-ultra-550b (1M ctx) · llama-3.2-11b-vision (vision) |
+| **Free**          | nemotron-3.5-lightning · laguna-xs-2.1 · north-mini-code · nemotron-3-nano-omni (vision) · nemotron-3-ultra-550b (1M ctx) · llama-3.2-11b-vision (vision) |
 
 ### Routing profiles
 
