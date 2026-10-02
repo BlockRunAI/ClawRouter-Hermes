@@ -68,16 +68,16 @@ catalog. You switch models from the picker — no config edit per switch:
 
 ```
 blockrun/auto                 ← smart routing: best model per request
-blockrun/anthropic/claude-fable-5
-blockrun/anthropic/claude-opus-4.8
-blockrun/openai/gpt-5.6-terra
+blockrun/anthropic/claude-fable-5.1
+blockrun/anthropic/claude-opus-5.5
+blockrun/openai/gpt-6-astra
 blockrun/google/gemini-3.1-pro
-blockrun/xai/grok-4.5
+blockrun/xai/grok-4.7
 blockrun/minimax/minimax-m3
 blockrun/moonshot/kimi-k3
 blockrun/deepseek/deepseek-v4-pro
 blockrun/free/nemotron-3.5-lightning
-…56 curated entries (<!-- br:models.chatVisible@live -->82<!-- /br:models.chatVisible@live --> models via the gateway)
+…63 curated entries (<!-- br:models.chatVisible@live -->82<!-- /br:models.chatVisible@live --> models via the gateway)
 ```
 
 Set the model to `blockrun/auto` and the gateway's router picks a model per request
