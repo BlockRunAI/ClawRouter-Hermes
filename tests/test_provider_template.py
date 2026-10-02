@@ -230,19 +230,7 @@ def test_curated_picker_catalog_orders_featured_models():
 #: check, projects $0 into the strict maxCostPerRun gate and never accumulates
 #: into session cost. An exemption is a cost-cap hole with a deadline, so the
 #: deadline is enforced rather than remembered.
-POST_TOP_MODELS_ADDITIONS: frozenset = frozenset({
-    # Live in /api/v1/models on 2026-10-02 (BlockRunAI/blockrun#781); not yet
-    # in ClawRouter's top-models.json.
-    "blockrun/anthropic/claude-fable-5.1",
-    "blockrun/anthropic/claude-opus-5.5",
-    "blockrun/anthropic/claude-sonnet-5.5",
-    "blockrun/openai/gpt-6-astra",
-    "blockrun/openai/gpt-6-sol",
-    "blockrun/openai/gpt-6-luna",
-    "blockrun/openai/gpt-5.1",
-    "blockrun/xai/grok-4.7",
-    "blockrun/xai/grok-4.6",
-})
+POST_TOP_MODELS_ADDITIONS: frozenset = frozenset()
 
 #: Entries whose picker placement deliberately diverges from top-models.json
 #: order; membership is still enforced. Empty since 2026-08-31 — its only
