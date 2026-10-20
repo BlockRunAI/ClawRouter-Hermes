@@ -252,18 +252,14 @@ def test_curated_picker_catalog_orders_featured_models():
 #: ClawRouter ships them. Drop each one from here the moment it lands in
 #: top-models.json — a stale entry silences the guard for a real drift.
 #: Was empty from 2026-09-06 (ClawRouter 0.12.276 landed Gemini 3.8 Flash)
-#: until the 2026-10-02 additions below. The Gemini entry is why the "has it landed yet" assertion below
+#: until the 2026-10-02 additions, and empty again since 2026-10-20
+#: (BlockRunAI/ClawRouter#487 landed DeepSeek V4.1 Flash). The Gemini entry is why the "has it landed yet" assertion below
 #: exists — a picker ID ClawRouter does not carry in BLOCKRUN_MODELS makes
 #: estimateAmount() return undefined, which skips the pre-request balance
 #: check, projects $0 into the strict maxCostPerRun gate and never accumulates
 #: into session cost. An exemption is a cost-cap hole with a deadline, so the
 #: deadline is enforced rather than remembered.
-POST_TOP_MODELS_ADDITIONS: frozenset = frozenset({
-    # Live on blockrun.ai since 2026-10-20; ClawRouter adds it to
-    # BLOCKRUN_MODELS + top-models.json in BlockRunAI/ClawRouter#487. Drop this
-    # once that merges — the "landed" assertion below fails until you do.
-    "blockrun/deepseek/deepseek-v4.1-flash",
-})
+POST_TOP_MODELS_ADDITIONS: frozenset = frozenset()
 
 #: Entries whose picker placement deliberately diverges from top-models.json
 #: order; membership is still enforced. Empty since 2026-08-31 — its only
