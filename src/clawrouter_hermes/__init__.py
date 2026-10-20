@@ -28,7 +28,7 @@ __all__ = ["register"]
 
 logger = logging.getLogger(__name__)
 
-_VERSION = "0.4.3"
+_VERSION = "0.4.4"
 
 
 def register(ctx) -> None:
