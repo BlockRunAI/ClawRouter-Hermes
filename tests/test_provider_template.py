@@ -258,7 +258,12 @@ def test_curated_picker_catalog_orders_featured_models():
 #: check, projects $0 into the strict maxCostPerRun gate and never accumulates
 #: into session cost. An exemption is a cost-cap hole with a deadline, so the
 #: deadline is enforced rather than remembered.
-POST_TOP_MODELS_ADDITIONS: frozenset = frozenset()
+POST_TOP_MODELS_ADDITIONS: frozenset = frozenset({
+    # Live on blockrun.ai since 2026-10-20; ClawRouter adds it to
+    # BLOCKRUN_MODELS + top-models.json in BlockRunAI/ClawRouter#487. Drop this
+    # once that merges — the "landed" assertion below fails until you do.
+    "blockrun/deepseek/deepseek-v4.1-flash",
+})
 
 #: Entries whose picker placement deliberately diverges from top-models.json
 #: order; membership is still enforced. Empty since 2026-08-31 — its only
