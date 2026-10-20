@@ -72,6 +72,7 @@ CHAT_MODELS = (
     "blockrun/qwen/qwen3.8-flash",
     "blockrun/deepseek/deepseek-v4-flash-vision-exp",
     "blockrun/deepseek/deepseek-v4-pro",
+    "blockrun/deepseek/deepseek-v4.1-flash",
     "blockrun/deepseek/deepseek-chat",
     "blockrun/deepseek/deepseek-reasoner",
     "blockrun/free/nemotron-3.5-lightning",
