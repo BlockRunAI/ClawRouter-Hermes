@@ -258,7 +258,16 @@ def test_curated_picker_catalog_orders_featured_models():
 #: check, projects $0 into the strict maxCostPerRun gate and never accumulates
 #: into session cost. An exemption is a cost-cap hole with a deadline, so the
 #: deadline is enforced rather than remembered.
-POST_TOP_MODELS_ADDITIONS: frozenset = frozenset()
+POST_TOP_MODELS_ADDITIONS: frozenset = frozenset({
+    # 2026-10-20 live-catalog sync. All four are in blockrun.ai/api/v1/models
+    # and ClawRouter carries them in BLOCKRUN_MODELS + top-models.json on
+    # feat/live-catalog-2026-10-20 (BlockRunAI/ClawRouter#485). Drop them here
+    # once that merges — the "landed" assertion below fails until you do.
+    "blockrun/openai/gpt-6.1-sol",
+    "blockrun/tencent/hy4-preview",
+    "blockrun/mistral/mistral-large-4",
+    "blockrun/qwen/qwen3.8-max",
+})
 
 #: Entries whose picker placement deliberately diverges from top-models.json
 #: order; membership is still enforced. Empty since 2026-08-31 — its only
