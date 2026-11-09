@@ -1,6 +1,6 @@
 ---
 name: clawrouter
-description: Hosted-gateway LLM router — save 87% on inference costs. A local proxy that forwards each request to the blockrun.ai gateway, which routes to the cheapest capable model across <!-- br:models.chatVisible -->91<!-- /br:models.chatVisible --> models from OpenAI, Anthropic, Google, DeepSeek, xAI, NVIDIA, and more. <!-- br:models.free -->8<!-- /br:models.free --> free models included. Also exposes realtime market data (global stocks, crypto, FX, commodities), Twitter/X intelligence, and prediction-market data across Polymarket, Kalshi, Limitless, Opinion, Predict.Fun, dFlow + UMA oracle resolution + wallet identity & clustering as built-in agent tools. Not a local-inference tool — prompts are sent to the blockrun.ai gateway.
+description: Hosted-gateway LLM router — save 87% on inference costs. A local proxy that forwards each request to the blockrun.ai gateway, which routes to the cheapest capable model across <!-- br:models.chatVisible -->91<!-- /br:models.chatVisible --> models from OpenAI, Anthropic, Google, DeepSeek, xAI, NVIDIA, and more. <!-- br:models.free -->9<!-- /br:models.free --> free models included. Also exposes realtime market data (global stocks, crypto, FX, commodities), Twitter/X intelligence, and prediction-market data across Polymarket, Kalshi, Limitless, Opinion, Predict.Fun, dFlow + UMA oracle resolution + wallet identity & clustering as built-in agent tools. Not a local-inference tool — prompts are sent to the blockrun.ai gateway.
 triggers:
   - "clawrouter"
   - "claw router"
@@ -100,7 +100,7 @@ Wallet lives at `~/.openclaw/blockrun/mnemonic` (shared with the upstream TS CLI
 
 ---
 
-Hosted-gateway LLM router that saves <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across <!-- br:models.chatVisible -->91<!-- /br:models.chatVisible --> models from 12 providers (<!-- br:models.free -->8<!-- /br:models.free --> free models). Billing flows through one credential — a local USDC wallet, or one BlockRun API key from https://user.blockrun.ai. Either way you do not hold provider API keys.
+Hosted-gateway LLM router that saves <!-- br:savings.autoVsBaselinePct -->84<!-- /br:savings.autoVsBaselinePct -->% on inference costs by forwarding each request to the blockrun.ai gateway, which picks the cheapest model capable of handling it across <!-- br:models.chatVisible -->91<!-- /br:models.chatVisible --> models from 12 providers (<!-- br:models.free -->9<!-- /br:models.free --> free models). Billing flows through one credential — a local USDC wallet, or one BlockRun API key from https://user.blockrun.ai. Either way you do not hold provider API keys.
 
 **This is not a local-inference tool.** ClawRouter is a thin local proxy. Your prompts are sent over HTTPS to the blockrun.ai gateway for model execution. If your workload requires inference that never leaves your machine, use a local runtime like Ollama — ClawRouter is not the right tool for that use case.
 
